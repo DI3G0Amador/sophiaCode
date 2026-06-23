@@ -4,6 +4,7 @@ import { runMvpCommand } from './mvp.js';
 import { runTaskCommand } from './task.js';
 import { runDevCommand } from './dev.js';
 import { runSkillCommand } from './skill.js';
+import { runBridgeCommand } from './bridge.js';
 import { ensureLanguageResolved } from '../core/i18n.js';
 
 /**
@@ -88,6 +89,23 @@ export function setupCommands(): Command {
         await runSkillCommand(basePath);
       } catch (error) {
         console.error('An unexpected error occurred during skill setup:', error);
+        process.exit(1);
+      }
+    });
+
+  // Command: bridge
+  program
+    .command('bridge')
+    .description(
+      'Configure other developer tools (Claude Code, Cursor, OpenCode, Codex) to read sophiAgents context'
+    )
+    .action(async () => {
+      try {
+        const basePath = process.cwd();
+        await ensureLanguageResolved();
+        await runBridgeCommand(basePath);
+      } catch (error) {
+        console.error('An unexpected error occurred during bridge setup:', error);
         process.exit(1);
       }
     });

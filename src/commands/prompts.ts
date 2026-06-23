@@ -5,11 +5,10 @@ import { t } from '../core/i18n.js';
 export interface SetupConfig {
   provider: AIProvider;
   modelName: string;
-  integrations: ('claude' | 'opencode')[];
 }
 
 /**
- * Initiates an interactive terminal questionnaire to collect provider preferences and integrations.
+ * Initiates an interactive terminal questionnaire to collect provider preferences.
  * Accepts defaultValues to prepopulate prompts if the user has already ran setup.
  */
 export async function askSetupConfig(defaultValues?: Partial<SetupConfig>): Promise<SetupConfig> {
@@ -58,25 +57,6 @@ export async function askSetupConfig(defaultValues?: Partial<SetupConfig>): Prom
           initialValue: initialModel || defaultModel,
         });
       },
-
-      integrations: () =>
-        p.multiselect({
-          message: t('integrations_select'),
-          initialValues: defaultValues?.integrations || [],
-          options: [
-            {
-              value: 'claude',
-              label: 'Claude Code (Cria/Edita CLAUDE.md na raiz)',
-              hint: 'Redireciona o Claude Code para o sophiAgents',
-            },
-            {
-              value: 'opencode',
-              label: 'OpenCode / Outros (Cria/Edita AGENTS.md na raiz)',
-              hint: 'Redireciona o OpenCode para o sophiAgents',
-            },
-          ],
-          required: false, // User can select none to avoid root pollution!
-        }),
     },
     {
       // Gracefully handle terminal exit (Ctrl+C)

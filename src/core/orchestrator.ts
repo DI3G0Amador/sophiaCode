@@ -4,7 +4,6 @@ import {
   saveDocumentation,
   saveProjectConfig,
   readProjectConfig,
-  saveRootBridgedFiles,
 } from './fs/writer.js';
 import { scanDirectory } from './fs/scanner.js';
 import { analyzeWorkspaceLocally, formatAnalysisReport } from './fs/analyzer.js';
@@ -61,7 +60,7 @@ export async function runInitFlow(basePath: string): Promise<void> {
     temperature: recommendation.temperature,
     contextLimit: recommendation.contextLimit,
     contextStrategy: recommendation.contextStrategy,
-    integrations: setupConfig.integrations,
+    integrations: [],
   };
 
   // Immediately save the configuration placeholder to config.json.
@@ -234,14 +233,6 @@ export async function runInitFlow(basePath: string): Promise<void> {
       basePath,
       finalContext.architectureContent,
       finalContext.patternsContent
-    );
-
-    // Save root bridges (CLAUDE.md and AGENTS.md)
-    await saveRootBridgedFiles(
-      basePath,
-      finalContext.claudeContent,
-      finalContext.rootAgentsContent,
-      setupConfig.integrations
     );
 
     // Save final configuration including purpose and alignment QA

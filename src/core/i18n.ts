@@ -109,6 +109,16 @@ export type TranslationKeys =
   | 'skill_web_success'
   | 'skill_script_success'
   | 'skill_script_content'
+  | 'bridge_error_init'
+  | 'bridge_error_init_instruction'
+  | 'bridge_intro'
+  | 'bridge_select_prompt'
+  | 'bridge_claude_label'
+  | 'bridge_cursor_label'
+  | 'bridge_opencode_label'
+  | 'bridge_codex_label'
+  | 'bridge_success'
+  | 'bridge_outro'
   | 'cancel_generic';
 
 export const TRANSLATIONS: Record<
@@ -233,6 +243,17 @@ export const TRANSLATIONS: Record<
     skill_script_success: 'Custom script generated at "sophiAgents/skills/verify-quality.sh"',
     skill_script_content:
       '#!/bin/bash\n# Automation script for pre-approved repetitive tasks\n# The AI can run this script to execute local builds or migrations\n\necho "Running local code validation..."\nnpm run lint && npm run typecheck\nif [ $? -eq 0 ]; then\n  echo "All clean!"\nelse\n  echo "Found static analysis issues. Correct them before committing."\n  exit 1\nfi\n',
+    bridge_error_init: 'Error: sophiaContext is not initialized in this repository.',
+    bridge_error_init_instruction: 'Run the command "sophiacode init" first.',
+    bridge_intro: 'Bridge Configurator (Agent Integrations)',
+    bridge_select_prompt:
+      'Select which AI tools you want to configure to use SophiaCode (press space to select):',
+    bridge_claude_label: 'Claude Code (Creates/modifies CLAUDE.md)',
+    bridge_cursor_label: 'Cursor (Creates/modifies .cursorrules)',
+    bridge_opencode_label: 'OpenCode (Creates/modifies AGENTS.md)',
+    bridge_codex_label: 'Codex / Others (Creates/modifies llms.txt)',
+    bridge_success: 'Integrations successfully configured!',
+    bridge_outro: 'Your AI tools are now redirected to read sophiAgents context and rules.',
     cancel_generic: 'Operation cancelled.',
   },
   pt: {
@@ -361,6 +382,18 @@ export const TRANSLATIONS: Record<
     skill_script_success: 'Script customizado gerado em "sophiAgents/skills/verify-quality.sh"',
     skill_script_content:
       '#!/bin/bash\n# Script de automação para tarefas repetitivas pré-aprovadas\n# A IA pode executar este script para rodar builds locais ou migrations\n\necho "Executando validação de código local..."\nnpm run lint && npm run typecheck\nif [ $? -eq 0 ]; then\n  echo "Tudo limpo!"\nelse\n  echo "Encontrado problemas estáticos. Corrija-os antes de commitar."\n  exit 1\nfi\n',
+    bridge_error_init: 'Erro: O sophiaContext não está inicializado neste repositório.',
+    bridge_error_init_instruction: 'Execute o comando "sophiacode init" primeiro.',
+    bridge_intro: 'Configurador de Pontes (Integração de Agentes)',
+    bridge_select_prompt:
+      'Selecione quais ferramentas de IA deseja configurar para usar o SophiaCode (pressione espaço para marcar):',
+    bridge_claude_label: 'Claude Code (Cria/modifica CLAUDE.md)',
+    bridge_cursor_label: 'Cursor (Cria/modifica .cursorrules)',
+    bridge_opencode_label: 'OpenCode (Cria/modifica AGENTS.md)',
+    bridge_codex_label: 'Codex / Outros (Cria/modifica llms.txt)',
+    bridge_success: 'Integrações configuradas com sucesso!',
+    bridge_outro:
+      'Suas ferramentas de IA agora estão redirecionadas para ler o contexto e regras do sophiAgents.',
     cancel_generic: 'Operação cancelada.',
   },
 };

@@ -98,22 +98,46 @@ async function writeOrRedirectFile(
 }
 
 /**
- * Saves the bridged files in the project root pointing external agents (Claude, OpenCode) to the sophiAgents directory.
+ * Saves the bridged files in the project root pointing external agents to the sophiAgents directory.
  */
-export async function saveRootBridgedFiles(
+export async function writeAgentBridgeFile(
   basePath: string,
-  claudeContent: string,
-  rootAgentsContent: string,
-  integrations: ('claude' | 'opencode')[] = []
+  toolType: 'claude' | 'cursor' | 'opencode' | 'codex'
 ): Promise<void> {
-  if (integrations.includes('claude')) {
-    const claudePath = path.join(basePath, 'CLAUDE.md');
-    await writeOrRedirectFile(claudePath, 'CLAUDE.md', claudeContent);
+  let fileName = '';
+  let content = '';
+
+  if (toolType === 'claude') {
+    fileName = 'CLAUDE.md';
+    content =
+      `# Claude Code Redirection\n\n` +
+      `This project uses SophiaCode for development guidelines. Please read:\n` +
+      `- [sophiAgents/context/architecture.md](sophiAgents/context/architecture.md)\n` +
+      `- [sophiAgents/context/coding-patterns.md](sophiAgents/context/coding-patterns.md)\n`;
+  } else if (toolType === 'cursor') {
+    fileName = '.cursorrules';
+    content =
+      `This project uses SophiaCode for development guidelines. Please read:\n` +
+      `- sophiAgents/context/architecture.md\n` +
+      `- sophiAgents/context/coding-patterns.md\n`;
+  } else if (toolType === 'opencode') {
+    fileName = 'AGENTS.md';
+    content =
+      `# OpenCode Redirection\n\n` +
+      `This project uses SophiaCode for development guidelines. Please read:\n` +
+      `- sophiAgents/context/architecture.md\n` +
+      `- sophiAgents/context/coding-patterns.md\n`;
+  } else if (toolType === 'codex') {
+    fileName = 'llms.txt';
+    content =
+      `# llms.txt Redirection\n\n` +
+      `This project uses SophiaCode for development guidelines. Please read:\n` +
+      `- sophiAgents/context/architecture.md\n` +
+      `- sophiAgents/context/coding-patterns.md\n`;
   }
-  if (integrations.includes('opencode')) {
-    const agentsPath = path.join(basePath, 'AGENTS.md');
-    await writeOrRedirectFile(agentsPath, 'AGENTS.md', rootAgentsContent);
-  }
+
+  const filePath = path.join(basePath, fileName);
+  await writeOrRedirectFile(filePath, fileName, content);
 }
 
 /**

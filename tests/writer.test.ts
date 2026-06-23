@@ -8,7 +8,7 @@ import {
   writeMapFile,
   saveProjectConfig,
   readProjectConfig,
-  saveRootBridgedFiles,
+  writeAgentBridgeFile,
 } from '../src/core/fs/writer.js';
 
 describe('Writer Module (fs/writer.ts)', () => {
@@ -69,37 +69,29 @@ describe('Writer Module (fs/writer.ts)', () => {
     expect(readData).toEqual(configData);
   });
 
-  it('should create new CLAUDE.md and AGENTS.md files in the root if they do not exist and are selected', async () => {
-    const claudeContent = '# CLAUDE.md file';
-    const agentsContent = '# AGENTS.md file';
-
-    await saveRootBridgedFiles(testWorkspace, claudeContent, agentsContent, ['claude', 'opencode']);
+  it('should create new bridge configuration files in the root if they do not exist', async () => {
+    await writeAgentBridgeFile(testWorkspace, 'claude');
+    await writeAgentBridgeFile(testWorkspace, 'opencode');
 
     const readClaude = await fs.readFile(path.join(testWorkspace, 'CLAUDE.md'), 'utf-8');
     const readAgents = await fs.readFile(path.join(testWorkspace, 'AGENTS.md'), 'utf-8');
 
-    expect(readClaude).toBe(claudeContent);
-    expect(readAgents).toBe(agentsContent);
+    expect(readClaude).toContain('Claude Code Redirection');
+    expect(readAgents).toContain('OpenCode Redirection');
   });
 
-  it('should only create CLAUDE.md and not AGENTS.md if only claude is selected', async () => {
-    // Clean up first
-    await fs.rm(path.join(testWorkspace, 'CLAUDE.md'), { force: true });
-    await fs.rm(path.join(testWorkspace, 'AGENTS.md'), { force: true });
+  it('should create Cursor and Codex bridge config files', async () => {
+    await writeAgentBridgeFile(testWorkspace, 'cursor');
+    await writeAgentBridgeFile(testWorkspace, 'codex');
 
-    const claudeContent = '# CLAUDE.md file';
-    const agentsContent = '# AGENTS.md file';
+    const readCursor = await fs.readFile(path.join(testWorkspace, '.cursorrules'), 'utf-8');
+    const readCodex = await fs.readFile(path.join(testWorkspace, 'llms.txt'), 'utf-8');
 
-    await saveRootBridgedFiles(testWorkspace, claudeContent, agentsContent, ['claude']);
-
-    const readClaude = await fs.readFile(path.join(testWorkspace, 'CLAUDE.md'), 'utf-8');
-    expect(readClaude).toBe(claudeContent);
-
-    // AGENTS.md should not exist
-    await expect(fs.access(path.join(testWorkspace, 'AGENTS.md'))).rejects.toThrow();
+    expect(readCursor).toContain('This project uses SophiaCode');
+    expect(readCodex).toContain('llms.txt Redirection');
   });
 
-  it('should prepend redirection notice to existing CLAUDE.md and AGENTS.md to preserve existing custom files when selected', async () => {
+  it('should prepend redirection notice to existing files to preserve existing custom files', async () => {
     const customClaude = '# Existing custom Claude commands\n- build: npm run compile';
     const claudePath = path.join(testWorkspace, 'CLAUDE.md');
 
@@ -107,10 +99,7 @@ describe('Writer Module (fs/writer.ts)', () => {
     await fs.writeFile(claudePath, customClaude, 'utf-8');
 
     // Run redirection logic
-    await saveRootBridgedFiles(testWorkspace, '# Claude redirect', '# Agents redirect', [
-      'claude',
-      'opencode',
-    ]);
+    await writeAgentBridgeFile(testWorkspace, 'claude');
 
     // Verify it was prepended
     const content = await fs.readFile(claudePath, 'utf-8');
