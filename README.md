@@ -1,6 +1,6 @@
 # SophiaCode CLI
 
-Read this document in Portuguese / Leia este documento em Português: [README.pt.md](README.pt.md)
+Read this in other languages: [English](README.md) | [Português (Brasil)](README.pt.md)
 
 Manage your project context, feature specifications (MVPs), and long-term memory for AI agents in an automated and structured way.
 
