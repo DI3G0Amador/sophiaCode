@@ -1,12 +1,6 @@
 import * as p from '@clack/prompts';
 import { AIProvider } from '../core/fs/global-config.js';
-
-// Define a structure for the user responses
-export interface UserRules {
-  objective: string;
-  outOfScope: string;
-  acceptableErrors: string;
-}
+import { t } from '../core/i18n.js';
 
 export interface SetupConfig {
   provider: AIProvider;
@@ -19,13 +13,13 @@ export interface SetupConfig {
  * Accepts defaultValues to prepopulate prompts if the user has already ran setup.
  */
 export async function askSetupConfig(defaultValues?: Partial<SetupConfig>): Promise<SetupConfig> {
-  p.intro('👋 Bem-vindo à configuração do SophiaCode!');
+  p.intro(t('welcome_intro'));
 
   const config = await p.group(
     {
       provider: () =>
         p.select({
-          message: 'Qual Provedor de IA você deseja usar?',
+          message: t('provider_select'),
           initialValue: defaultValues?.provider || 'gemini',
           options: [
             {
@@ -59,7 +53,7 @@ export async function askSetupConfig(defaultValues?: Partial<SetupConfig>): Prom
           defaultValues?.provider === results.provider ? defaultValues?.modelName : undefined;
 
         return p.text({
-          message: 'Qual o nome do modelo de IA específico que deseja usar?',
+          message: t('model_name_prompt'),
           placeholder,
           initialValue: initialModel || defaultModel,
         });
@@ -67,7 +61,7 @@ export async function askSetupConfig(defaultValues?: Partial<SetupConfig>): Prom
 
       integrations: () =>
         p.multiselect({
-          message: 'Deseja criar pontes de integração na raiz do projeto para outros agentes?',
+          message: t('integrations_select'),
           initialValues: defaultValues?.integrations || [],
           options: [
             {
@@ -87,7 +81,7 @@ export async function askSetupConfig(defaultValues?: Partial<SetupConfig>): Prom
     {
       // Gracefully handle terminal exit (Ctrl+C)
       onCancel: () => {
-        p.cancel('Configuração cancelada pelo usuário.');
+        p.cancel(t('cancel_generic'));
         process.exit(0);
       },
     }

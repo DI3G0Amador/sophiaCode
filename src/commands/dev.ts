@@ -1,4 +1,5 @@
 import * as p from '@clack/prompts';
+import { t } from '../core/i18n.js';
 import {
   checkConfigExist,
   listTasks,
@@ -10,29 +11,29 @@ export async function runDevCommand(basePath: string): Promise<void> {
   // 1. Verify that context has been initialized first
   const initialized = await checkConfigExist(basePath);
   if (!initialized) {
-    p.log.error('❌ Erro: O sophiaContext não está inicializado neste repositório.');
-    p.log.info('Execute o comando "sophiacode init" primeiro.');
+    p.log.error(t('dev_error_init'));
+    p.log.info(t('dev_error_init_instruction'));
     return;
   }
 
   // 2. List all tasks
   const tasksList = await listTasks(basePath);
   if (tasksList.length === 0) {
-    p.log.warn('⚠️ Nenhuma tarefa planejada encontrada em "sophiAgents/tasks/".');
-    p.log.info('Planeje um MVP primeiro rodando o comando "sophiacode task".');
+    p.log.warn(t('dev_error_tasks'));
+    p.log.info(t('dev_error_tasks_instruction'));
     return;
   }
 
-  p.intro('💻 Modo Engenheiro - Execução de Tarefas');
+  p.intro(t('dev_intro'));
 
   // 3. User selects the task to inspect
   const selectedTaskDir = await p.select({
-    message: 'Selecione qual tarefa deseja desenvolver ou acompanhar:',
+    message: t('dev_select_prompt'),
     options: tasksList.map((taskDir) => ({ value: taskDir, label: taskDir })),
   });
 
   if (p.isCancel(selectedTaskDir)) {
-    p.outro('Operação cancelada.');
+    p.outro(t('cancel_generic'));
     return;
   }
 
@@ -41,27 +42,27 @@ export async function runDevCommand(basePath: string): Promise<void> {
   try {
     subtasks = await readTaskSubtasks(basePath, selectedTaskDir);
   } catch (error) {
-    p.log.error(`Não foi possível ler as subtasks desta tarefa: ${(error as Error).message}`);
-    p.outro('Operação falhou.');
+    p.log.error(t('dev_read_subtasks_error', (error as Error).message));
+    p.outro(t('dev_fail_generic'));
     return;
   }
 
   if (subtasks.length === 0) {
-    p.log.warn('⚠️ Esta tarefa não contém subtasks catalogadas.');
-    p.outro('Concluído.');
+    p.log.warn(t('dev_no_subtasks'));
+    p.outro(t('dev_done'));
     return;
   }
 
   // 5. Present checklist toggles
   const checklist = await p.multiselect({
-    message: 'Selecione as subtasks concluídas (pressione espaço para marcar/desmarcar):',
+    message: t('dev_checklist_prompt'),
     options: subtasks.map((s) => ({ value: s.id, label: s.title })),
     initialValues: subtasks.filter((s) => s.done).map((s) => s.id),
     required: false,
   });
 
   if (p.isCancel(checklist)) {
-    p.outro('Operação cancelada.');
+    p.outro(t('cancel_generic'));
     return;
   }
 
@@ -73,27 +74,25 @@ export async function runDevCommand(basePath: string): Promise<void> {
 
   try {
     await writeTaskSubtasks(basePath, selectedTaskDir, updatedSubtasks);
-    p.log.success('✅ Checklist de subtasks atualizado com sucesso!');
+    p.log.success(t('dev_save_success'));
   } catch (error) {
-    p.log.error(`Erro ao gravar as alterações: ${(error as Error).message}`);
-    p.outro('A operação falhou.');
+    p.log.error(t('dev_save_error', (error as Error).message));
+    p.outro(t('dev_fail_generic'));
     return;
   }
 
   // 7. Prompt developer with next instructions
   const nextSubtask = updatedSubtasks.find((s) => !s.done);
   if (nextSubtask) {
-    p.log.info('🤖 Próxima Subtask a ser resolvida:');
+    p.log.info(t('dev_next_step'));
     p.log.step(`» "${nextSubtask.title}"`);
     p.note(
-      `Instrução para a IA (Claude Code / Cursor / OpenCode):\n` +
-        `"Leia o plano detalhado em 'sophiAgents/tasks/${selectedTaskDir}/plan.md'\n` +
-        `e execute os passos para completar a subtask: '${nextSubtask.title}'."`,
-      'Instruções de Orquestração'
+      t('dev_next_instruction_content', selectedTaskDir, nextSubtask.title),
+      t('dev_next_instruction_title')
     );
   } else {
-    p.log.success('🎉 Excelente! Todas as subtasks desta tarefa foram marcadas como concluídas.');
+    p.log.success(t('dev_all_completed'));
   }
 
-  p.outro('Progresso salvo.');
+  p.outro(t('dev_outro'));
 }

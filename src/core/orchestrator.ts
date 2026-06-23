@@ -20,6 +20,7 @@ import {
 } from './ai/prompts.js';
 import { getRecommendation } from './ai/recommendations.js';
 import { getApiKey, saveApiKey } from './fs/global-config.js';
+import { t } from './i18n.js';
 
 /**
  * Main orchestration flow for the init (sophiaContext alignment) command.
@@ -28,14 +29,14 @@ export async function runInitFlow(basePath: string): Promise<void> {
   // 1. Check if the configuration files already exist
   const alreadyExists = await checkConfigExist(basePath);
   if (alreadyExists) {
-    p.log.warn('⚠️ Uma configuração do sophiAgents já está presente neste diretório.');
+    p.log.warn(t('init_overwrite_warn'));
     const overwrite = await p.confirm({
-      message: 'Deseja executar a configuração novamente e sobrescrever os arquivos existentes?',
+      message: t('init_overwrite_confirm'),
       initialValue: false,
     });
 
     if (p.isCancel(overwrite) || !overwrite) {
-      p.outro('Configuração abortada. Os arquivos existentes foram mantidos.');
+      p.outro(t('init_overwrite_cancel'));
       return;
     }
   }
@@ -67,7 +68,7 @@ export async function runInitFlow(basePath: string): Promise<void> {
   try {
     await saveProjectConfig(basePath, tempProjectConfig);
   } catch (error) {
-    p.log.error(`Não foi possível salvar o config.json temporário: ${(error as Error).message}`);
+    p.log.error(t('config_save_error', (error as Error).message));
   }
 
   // 4. Handle API Key resolution for cloud providers
@@ -76,69 +77,66 @@ export async function runInitFlow(basePath: string): Promise<void> {
     resolvedApiKey = await getApiKey(setupConfig.provider);
 
     if (!resolvedApiKey) {
-      p.log.warn(`🔑 A chave de API para o provedor "${setupConfig.provider}" não foi detectada.`);
+      p.log.warn(t('api_key_warn', setupConfig.provider));
 
       const promptKey = await p.password({
-        message: `Por favor, digite sua chave de API para o provedor ${setupConfig.provider.toUpperCase()}:`,
+        message: t('api_key_prompt', setupConfig.provider.toUpperCase()),
         validate(value) {
           if (!value || value.trim().length === 0) {
-            return 'A chave de API é obrigatória para prosseguir.';
+            return t('api_key_prompt_validation');
           }
         },
       });
 
       if (p.isCancel(promptKey)) {
-        p.outro('Configuração interrompida pelo usuário.');
+        p.outro(t('cancel_generic'));
         return;
       }
 
       resolvedApiKey = promptKey;
 
       const saveGlobally = await p.confirm({
-        message:
-          'Deseja salvar esta chave de API globalmente para que funcione em outros projetos?',
+        message: t('save_global_key_prompt'),
         initialValue: true,
       });
 
       if (p.isCancel(saveGlobally)) {
-        p.outro('Configuração interrompida.');
+        p.outro(t('cancel_generic'));
         return;
       }
 
       if (saveGlobally) {
         await saveApiKey(setupConfig.provider, resolvedApiKey);
-        p.log.success('Chave de API salva globalmente com sucesso!');
+        p.log.success(t('api_key_saved'));
       }
     }
   }
 
-  p.log.info(`🤖 Recomendações da Comunidade Aplicadas para "${setupConfig.modelName}":`);
-  p.log.step(`• Estratégia de Contexto: ${tempProjectConfig.contextStrategy}`);
-  p.log.step(`• Temperatura: ${tempProjectConfig.temperature}`);
-  p.log.step(`• Limite de Contexto: ${tempProjectConfig.contextLimit.toLocaleString()} tokens`);
+  p.log.info(t('community_recommendations', setupConfig.modelName));
+  p.log.step(t('recommendation_strategy', tempProjectConfig.contextStrategy));
+  p.log.step(t('recommendation_temp', tempProjectConfig.temperature));
+  p.log.step(t('recommendation_limit', tempProjectConfig.contextLimit.toLocaleString()));
 
   // 5. Scan the workspace directory and run Local Static Analysis
   const scanSpinner = p.spinner();
-  scanSpinner.start('Varrendo a estrutura e analisando os arquivos do projeto localmente...');
+  scanSpinner.start(t('scanner_start'));
 
   let analysisReport = '';
   try {
     const files = await scanDirectory(basePath);
     const localAnalysis = await analyzeWorkspaceLocally(basePath, files);
     analysisReport = formatAnalysisReport(localAnalysis);
-    scanSpinner.stop('Estrutura e dados do projeto mapeados e analisados localmente!');
+    scanSpinner.stop(t('scanner_success'));
   } catch (error) {
-    scanSpinner.stop('A análise local falhou!');
-    p.log.error(`Erro na análise estática: ${(error as Error).message}`);
-    p.outro('A configuração falhou.');
+    scanSpinner.stop(t('scanner_fail'));
+    p.log.error(t('scan_error_prefix', (error as Error).message));
+    p.outro(t('cancel_generic'));
     return;
   }
 
   // 6. Stage 1: AI Gap Discovery
   const discoverySpinner = p.spinner();
-  discoverySpinner.start(
-    'A IA do SophiaCode está analisando a estrutura para descobrir o propósito e lacunas de contexto...'
-  );
+  discoverySpinner.start(t('discovery_start'));
 
   let discoveryResult: { detectedPurpose: string; questions: { id: string; question: string }[] };
   try {
@@ -153,35 +151,35 @@ export async function runInitFlow(basePath: string): Promise<void> {
       detectedPurpose: string;
       questions: { id: string; question: string }[];
     }>(DISCOVERY_SYSTEM_PROMPT, buildDiscoveryPrompt(analysisReport), DISCOVERY_SCHEMA);
-    discoverySpinner.stop('Análise de lacunas concluída!');
+    discoverySpinner.stop(t('discovery_success'));
   } catch (error) {
-    discoverySpinner.stop('A análise de lacunas por IA falhou!');
-    p.log.error(`Erro: ${(error as Error).message}`);
-    p.outro('A configuração falhou.');
+    discoverySpinner.stop(t('discovery_fail'));
+    p.log.error(t('discovery_error_prefix', (error as Error).message));
+    p.outro(t('cancel_generic'));
     return;
   }
 
   // 7. Interactive Questionnaire
-  p.log.info('✨ Propósito Detectado pela IA:');
+  p.log.info(t('detected_purpose_title'));
   p.log.step(discoveryResult.detectedPurpose);
 
   const adjustedPurpose = await p.text({
-    message: 'Confirme ou ajuste o propósito geral detectado para o projeto:',
+    message: t('purpose_adjust_prompt'),
     initialValue: discoveryResult.detectedPurpose,
     validate(value) {
       if (!value || value.trim().length === 0) {
-        return 'O propósito do projeto é obrigatório.';
+        return t('purpose_required');
       }
     },
   });
 
   if (p.isCancel(adjustedPurpose)) {
-    p.outro('Configuração interrompida pelo usuário.');
+    p.outro(t('cancel_generic'));
     return;
   }
 
   const answers: { question: string; answer: string }[] = [];
-  p.log.info('🎯 Responda a 3 perguntas chave para fechar lacunas e evitar contexto fraco:');
+  p.log.info(t('questions_intro'));
 
   for (let i = 0; i < discoveryResult.questions.length; i++) {
     const q = discoveryResult.questions[i];
@@ -189,13 +187,13 @@ export async function runInitFlow(basePath: string): Promise<void> {
       message: `[${i + 1}/3] ${q.question}`,
       validate(value) {
         if (!value || value.trim().length === 0) {
-          return 'Esta resposta é obrigatória para garantir um contexto forte.';
+          return t('questions_validation');
         }
       },
     });
 
     if (p.isCancel(answer)) {
-      p.outro('Configuração interrompida pelo usuário.');
+      p.outro(t('cancel_generic'));
       return;
     }
 
@@ -204,9 +202,7 @@ export async function runInitFlow(basePath: string): Promise<void> {
 
   // 8. Stage 2: Final Context Generation
   const contextSpinner = p.spinner();
-  contextSpinner.start(
-    'Processando suas respostas e gerando os arquivos de diretrizes finais (sophiaContext)...'
-  );
+  contextSpinner.start(t('context_start'));
 
   try {
     const aiService = createAIService({
@@ -227,11 +223,11 @@ export async function runInitFlow(basePath: string): Promise<void> {
       FINAL_CONTEXT_SCHEMA
     );
 
-    contextSpinner.stop('Diretrizes e contexto do repositório gerados com sucesso!');
+    contextSpinner.stop(t('context_success'));
 
     // 9. Persist the generated files and final config on disk
     const saveSpinner = p.spinner();
-    saveSpinner.start('Gravando documentação do sophiaContext e pontes de agentes...');
+    saveSpinner.start(t('writer_start'));
 
     // Save context files (architecture.md and coding-patterns.md) under context/
     await saveDocumentation(
@@ -256,11 +252,11 @@ export async function runInitFlow(basePath: string): Promise<void> {
     };
     await saveProjectConfig(basePath, finalProjectConfig);
 
-    saveSpinner.stop('Arquivos de contexto e pontes gravados no disco!');
-    p.outro('🎉 SophiaCode inicializado com sucesso! Contexto gerado na pasta "sophiAgents/".');
+    saveSpinner.stop(t('writer_success'));
+    p.outro(t('init_success'));
   } catch (error) {
-    contextSpinner.stop('A geração do sophiaContext falhou!');
-    p.log.error(`Erro: ${(error as Error).message}`);
-    p.outro('A configuração falhou.');
+    contextSpinner.stop(t('context_fail'));
+    p.log.error(t('generation_error_prefix', (error as Error).message));
+    p.outro(t('cancel_generic'));
   }
 }

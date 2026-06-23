@@ -1,6 +1,7 @@
 import * as p from '@clack/prompts';
 import fs from 'fs/promises';
 import path from 'path';
+import { t } from '../core/i18n.js';
 import {
   checkConfigExist,
   readProjectConfig,
@@ -18,36 +19,34 @@ export async function runTaskCommand(basePath: string): Promise<void> {
   // 1. Verify that context has been initialized first
   const initialized = await checkConfigExist(basePath);
   if (!initialized) {
-    p.log.error('❌ Erro: O sophiaContext não está inicializado neste repositório.');
-    p.log.info(
-      'Execute o comando "sophiacode init" primeiro para gerar a documentação de contexto.'
-    );
+    p.log.error(t('task_error_init'));
+    p.log.info(t('task_error_init_instruction'));
     return;
   }
 
   // 2. List available MVPs
   const mvpKeys = await listMvpConfigs(basePath);
   if (mvpKeys.length === 0) {
-    p.log.warn('⚠️ Nenhuma especificação de MVP encontrada em "sophiAgents/mvps/".');
-    p.log.info('Crie um MVP primeiro rodando o comando "sophiacode mvp".');
+    p.log.warn(t('task_error_mvp'));
+    p.log.info(t('task_error_mvp_instruction'));
     return;
   }
 
-  p.intro('📋 Planejamento de MVP em Tarefas (Backlog Breakdown)');
+  p.intro(t('task_intro'));
 
   const selectedMvpKey = await p.select({
-    message: 'Selecione qual MVP deseja planejar/quebrar em tasks:',
+    message: t('task_select_prompt'),
     options: mvpKeys.map((key) => ({ value: key, label: key })),
   });
 
   if (p.isCancel(selectedMvpKey)) {
-    p.outro('Operação cancelada.');
+    p.outro(t('cancel_generic'));
     return;
   }
 
   // 3. Load input data
   const plannerSpinner = p.spinner();
-  plannerSpinner.start('Lendo a arquitetura e buscando a especificação do MVP...');
+  plannerSpinner.start(t('task_spinner_read'));
 
   let mvpData: any;
   let architectureMap: string;
@@ -59,19 +58,17 @@ export async function runTaskCommand(basePath: string): Promise<void> {
 
     const patternsPath = path.join(basePath, 'sophiAgents', 'context', 'coding-patterns.md');
     codingPatterns = await fs.readFile(patternsPath, 'utf-8');
-    plannerSpinner.stop('Arquivos e regras locais lidos com sucesso!');
+    plannerSpinner.stop(t('task_read_success'));
   } catch (error) {
-    plannerSpinner.stop('Falha ao ler os arquivos locais do sophiaContext!');
-    p.log.error(`Erro: ${(error as Error).message}`);
-    p.outro('A operação falhou.');
+    plannerSpinner.stop(t('task_read_fail'));
+    p.log.error(t('discovery_error_prefix', (error as Error).message));
+    p.outro(t('task_fail_generic'));
     return;
   }
 
   // 4. Setup AI Service and call LLM
   const aiSpinner = p.spinner();
-  aiSpinner.start(
-    'A IA está analisando a arquitetura para quebrar o MVP em planos de ação e checklists...'
-  );
+  aiSpinner.start(t('task_spinner_ai'));
 
   try {
     const config = await readProjectConfig(basePath);
@@ -101,28 +98,26 @@ export async function runTaskCommand(basePath: string): Promise<void> {
       }[];
     }>(TASK_SYSTEM_PROMPT, userPrompt, TASK_SCHEMA);
 
-    aiSpinner.stop('Plano de tarefas detalhado gerado com sucesso pela IA!');
+    aiSpinner.stop(t('task_ai_success'));
 
     // 5. Persist tasks to disk
     const saveSpinner = p.spinner();
-    saveSpinner.start('Salvando planos de ação e listas de tarefas no disco...');
+    saveSpinner.start(t('task_spinner_save'));
 
     for (const task of taskResult.tasks) {
       await saveTask(basePath, task.index, task.slug, task.planContent, task.subtasks);
-      p.log.step(`• Gerada: "sophiAgents/tasks/task-${task.index}-${task.slug}/plan.md"`);
+      p.log.step(t('task_generated_step', task.index, task.slug));
     }
 
     // Update MVP status
     mvpData.status = 'planned';
     await saveMvpConfig(basePath, selectedMvpKey, mvpData);
 
-    saveSpinner.stop('Backlog estruturado e checklists gerados com sucesso!');
-    p.outro(
-      `🎉 Concluído! O MVP "${mvpData.name}" foi quebrado em ${taskResult.tasks.length} tarefas. Rode "sophiacode dev" para gerenciar o progresso.`
-    );
+    saveSpinner.stop(t('task_success'));
+    p.outro(t('task_outro', mvpData.name, taskResult.tasks.length));
   } catch (error) {
-    aiSpinner.stop('A quebra de tarefas falhou!');
-    p.log.error(`Erro: ${(error as Error).message}`);
-    p.outro('A operação falhou.');
+    aiSpinner.stop(t('task_ai_fail'));
+    p.log.error(t('discovery_error_prefix', (error as Error).message));
+    p.outro(t('task_fail_generic'));
   }
 }

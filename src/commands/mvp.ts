@@ -8,86 +8,84 @@ import {
 import { createAIService } from '../core/ai/providers.js';
 import { MVP_SYSTEM_PROMPT, buildMvpPrompt, MVP_SCHEMA } from '../core/ai/prompts.js';
 import { getApiKey } from '../core/fs/global-config.js';
+import { t } from '../core/i18n.js';
 
 export async function runMvpCommand(basePath: string): Promise<void> {
   // 1. Verify that the context has been initialized first
   const initialized = await checkConfigExist(basePath);
   if (!initialized) {
-    p.log.error('❌ Erro: O sophiaContext não está inicializado neste repositório.');
-    p.log.info(
-      'Execute o comando "sophiacode init" primeiro para gerar a documentação de contexto.'
-    );
+    p.log.error(t('mvp_error_init'));
     return;
   }
 
-  p.intro('📦 Criar Nova Especificação de MVP');
+  p.intro(t('mvp_intro'));
 
   // 2. Collect inputs interactively
   const name = await p.text({
-    message: 'Qual o nome descritivo do MVP/Funcionalidade?',
+    message: t('mvp_name_prompt'),
     placeholder: 'Ex: Stripe Integration',
     validate(value) {
       if (!value || value.trim().length === 0) {
-        return 'O nome do MVP é obrigatório.';
+        return t('mvp_name_validation');
       }
     },
   });
   if (p.isCancel(name)) {
-    p.outro('Operação cancelada.');
+    p.outro(t('cancel_generic'));
     return;
   }
 
   const key = await p.text({
-    message: 'Qual a chave identificadora única (slug minúsculo sem espaços)?',
+    message: t('mvp_key_prompt'),
     placeholder: 'Ex: stripe-payments',
     validate(value) {
       if (!value || value.trim().length === 0) {
-        return 'A chave do MVP é obrigatória.';
+        return t('mvp_key_validation');
       }
       if (!/^[a-z0-9-]+$/.test(value)) {
-        return 'A chave deve conter apenas letras minúsculas, números e hífens.';
+        return t('mvp_key_regex_error');
       }
     },
   });
   if (p.isCancel(key)) {
-    p.outro('Operação cancelada.');
+    p.outro(t('cancel_generic'));
     return;
   }
 
   const objective = await p.text({
-    message: 'Qual o objetivo principal do MVP?',
+    message: t('mvp_objective_prompt'),
     placeholder: 'Ex: Permitir que usuários façam checkout e atualizem assinaturas no banco',
     validate(value) {
       if (!value || value.trim().length === 0) {
-        return 'O objetivo é obrigatório.';
+        return t('mvp_objective_validation');
       }
     },
   });
   if (p.isCancel(objective)) {
-    p.outro('Operação cancelada.');
+    p.outro(t('cancel_generic'));
     return;
   }
 
   const featuresText = await p.text({
-    message: 'Liste as principais features que compõem este MVP (separadas por vírgula):',
+    message: t('mvp_features_prompt'),
     placeholder: 'Ex: Rota de Webhook, Redirecionamento de Checkout, Validação de Assinatura',
     validate(value) {
       if (!value || value.trim().length === 0) {
-        return 'Pelo menos uma feature é obrigatória.';
+        return t('mvp_features_validation');
       }
     },
   });
   if (p.isCancel(featuresText)) {
-    p.outro('Operação cancelada.');
+    p.outro(t('cancel_generic'));
     return;
   }
 
   const constraints = await p.text({
-    message: 'Restrições ou Tecnologias específicas exigidas (Opcional):',
+    message: t('mvp_constraints_prompt'),
     placeholder: 'Ex: Usar Fastify e Prisma ORM, sem bibliotecas externas de Stripe adicionais',
   });
   if (p.isCancel(constraints)) {
-    p.outro('Operação cancelada.');
+    p.outro(t('cancel_generic'));
     return;
   }
 
@@ -98,7 +96,7 @@ export async function runMvpCommand(basePath: string): Promise<void> {
 
   // 3. Setup AI Service
   const aiSpinner = p.spinner();
-  aiSpinner.start('Processando dados e desenhando a especificação técnica do MVP...');
+  aiSpinner.start(t('mvp_spinner'));
 
   try {
     const config = await readProjectConfig(basePath);
@@ -132,15 +130,13 @@ export async function runMvpCommand(basePath: string): Promise<void> {
 
     // Save to disk
     await saveMvpConfig(basePath, key, mvpResult);
-    aiSpinner.stop('Especificação do MVP gerada com sucesso!');
+    aiSpinner.stop(t('mvp_success'));
 
-    p.log.success(`✅ Arquivo de especificação salvo: "sophiAgents/mvps/${key}.json"`);
-    p.outro(
-      '🎉 Concluído. Agora você pode rodar "sophiacode task" para quebrar este MVP em tarefas.'
-    );
+    p.log.success(`✅ "sophiAgents/mvps/${key}.json"`);
+    p.outro(t('mvp_outro'));
   } catch (error) {
-    aiSpinner.stop('Falha na geração do MVP!');
+    aiSpinner.stop('Error!');
     p.log.error(`Erro na IA: ${(error as Error).message}`);
-    p.outro('A operação falhou.');
+    p.outro(t('cancel_generic'));
   }
 }

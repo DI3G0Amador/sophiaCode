@@ -5,6 +5,7 @@ import os from 'os';
 export interface GlobalConfig {
   geminiApiKey?: string;
   openaiApiKey?: string;
+  language?: 'en' | 'pt';
 }
 
 export type AIProvider = 'gemini' | 'openai' | 'ollama';

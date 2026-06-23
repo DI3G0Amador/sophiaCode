@@ -4,6 +4,7 @@ import { runMvpCommand } from './mvp.js';
 import { runTaskCommand } from './task.js';
 import { runDevCommand } from './dev.js';
 import { runSkillCommand } from './skill.js';
+import { ensureLanguageResolved } from '../core/i18n.js';
 
 /**
  * Configures the commands for the CLI using Commander.
@@ -23,6 +24,7 @@ export function setupCommands(): Command {
     .action(async () => {
       try {
         const basePath = process.cwd();
+        await ensureLanguageResolved();
         await runInitFlow(basePath);
       } catch (error) {
         console.error('An unexpected error occurred during initialization:', error);
@@ -37,6 +39,7 @@ export function setupCommands(): Command {
     .action(async () => {
       try {
         const basePath = process.cwd();
+        await ensureLanguageResolved();
         await runMvpCommand(basePath);
       } catch (error) {
         console.error('An unexpected error occurred during MVP creation:', error);
@@ -51,6 +54,7 @@ export function setupCommands(): Command {
     .action(async () => {
       try {
         const basePath = process.cwd();
+        await ensureLanguageResolved();
         await runTaskCommand(basePath);
       } catch (error) {
         console.error('An unexpected error occurred during task planning:', error);
@@ -65,6 +69,7 @@ export function setupCommands(): Command {
     .action(async () => {
       try {
         const basePath = process.cwd();
+        await ensureLanguageResolved();
         await runDevCommand(basePath);
       } catch (error) {
         console.error('An unexpected error occurred during engineering mode execution:', error);
@@ -79,6 +84,7 @@ export function setupCommands(): Command {
     .action(async () => {
       try {
         const basePath = process.cwd();
+        await ensureLanguageResolved();
         await runSkillCommand(basePath);
       } catch (error) {
         console.error('An unexpected error occurred during skill setup:', error);

@@ -1,4 +1,3 @@
-
 /**
  * System prompt instructing the AI to perform a codebase analysis and identify gaps.
  */
