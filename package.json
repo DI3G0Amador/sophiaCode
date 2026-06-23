@@ -1,0 +1,32 @@
+{
+  "name": "sophiacode",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "sophiacode": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest src/",
+    "test:run": "vitest run src/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@clack/prompts": "^1.6.0",
+    "@google/genai": "^2.9.0",
+    "commander": "^15.0.0",
+    "dotenv": "^17.4.2",
+    "fast-glob": "^3.3.3",
+    "openai": "^6.44.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}
