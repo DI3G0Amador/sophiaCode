@@ -119,6 +119,16 @@ export type TranslationKeys =
   | 'bridge_codex_label'
   | 'bridge_success'
   | 'bridge_outro'
+  | 'dashboard_title'
+  | 'dashboard_select_prompt'
+  | 'dashboard_menu_init'
+  | 'dashboard_menu_mvp'
+  | 'dashboard_menu_task'
+  | 'dashboard_menu_dev'
+  | 'dashboard_menu_skill'
+  | 'dashboard_menu_bridge'
+  | 'dashboard_menu_exit'
+  | 'dashboard_outro'
   | 'cancel_generic';
 
 export const TRANSLATIONS: Record<
@@ -254,6 +264,16 @@ export const TRANSLATIONS: Record<
     bridge_codex_label: 'Codex / Others (Creates/modifies llms.txt)',
     bridge_success: 'Integrations successfully configured!',
     bridge_outro: 'Your AI tools are now redirected to read sophiAgents context and rules.',
+    dashboard_title: 'SophiaCode AI Workspace Dashboard',
+    dashboard_select_prompt: 'Select which action you want to perform:',
+    dashboard_menu_init: 'Initialize SophiaCode project context (init)',
+    dashboard_menu_mvp: 'Create new MVP technical specification (mvp)',
+    dashboard_menu_task: 'Plan planned MVP into sequential task backlogs (task)',
+    dashboard_menu_dev: 'Engineer Mode - Monitor and progress checklist (dev)',
+    dashboard_menu_skill: 'Configure MCP templates and automation scripts (skill)',
+    dashboard_menu_bridge: 'Configure external AI developer tool bridges (bridge)',
+    dashboard_menu_exit: 'Exit',
+    dashboard_outro: 'Exiting SophiaCode. Goodbye!',
     cancel_generic: 'Operation cancelled.',
   },
   pt: {
@@ -394,6 +414,16 @@ export const TRANSLATIONS: Record<
     bridge_success: 'Integrações configuradas com sucesso!',
     bridge_outro:
       'Suas ferramentas de IA agora estão redirecionadas para ler o contexto e regras do sophiAgents.',
+    dashboard_title: 'Painel SophiaCode AI Workspace',
+    dashboard_select_prompt: 'Selecione qual ação deseja realizar:',
+    dashboard_menu_init: 'Inicializar o contexto do projeto (init)',
+    dashboard_menu_mvp: 'Criar especificação de novo MVP (mvp)',
+    dashboard_menu_task: 'Planejar MVP em backlog de tarefas (task)',
+    dashboard_menu_dev: 'Modo Engenheiro - Monitorar e progredir checklist (dev)',
+    dashboard_menu_skill: 'Configurar MCP e scripts de automação (skill)',
+    dashboard_menu_bridge: 'Configurar pontes de integração de agentes de IA (bridge)',
+    dashboard_menu_exit: 'Sair',
+    dashboard_outro: 'Saindo do SophiaCode. Até mais!',
     cancel_generic: 'Operação cancelada.',
   },
 };
