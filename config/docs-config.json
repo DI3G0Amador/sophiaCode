@@ -1,0 +1,7 @@
+{
+  "project": "SophiaCode CLI",
+  "docsDir": "./docs",
+  "sophiAgentsDir": "./sophiAgents",
+  "supportedProviders": ["gemini", "openai", "ollama"],
+  "bridges": ["claude", "opencode"]
+}

@@ -1,0 +1,84 @@
+#!/usr/bin/env node
+
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { execSync } from 'child_process';
+
+const basePath = process.cwd();
+
+try {
+  // 1. Read package.json to get version and package name
+  const pkgPath = path.join(basePath, 'package.json');
+  if (!fs.existsSync(pkgPath)) {
+    throw new Error('package.json not found in the current directory.');
+  }
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+  const version = pkg.version;
+  const packageName = pkg.name;
+
+  console.log(`🚀 Starting deployment/packaging for ${packageName} v${version}...`);
+
+  // 2. Extract release notes from CHANGELOG.md
+  const changelogPath = path.join(basePath, 'CHANGELOG.md');
+  let releaseNotes = 'No changelog notes found for this version.';
+  if (fs.existsSync(changelogPath)) {
+    const changelog = fs.readFileSync(changelogPath, 'utf-8');
+    // Match header like: ## [1.0.0] - 2026-06-23 or ## [1.0.0]
+    const versionEscaped = version.replace(/\./g, '\\.');
+    const regex = new RegExp(`##\\s+\\[${versionEscaped}\\](?:[^\n]*)\\r?\\n([\\s\\S]*?)(?=\\r?\\n##\\s+\\[|\\Z)`, 'i');
+    const match = changelog.match(regex);
+    if (match && match[1]) {
+      releaseNotes = match[1].trim();
+    } else {
+      console.warn(`⚠️ Warning: Could not find release notes for version [${version}] in CHANGELOG.md`);
+    }
+  } else {
+    console.warn('⚠️ Warning: CHANGELOG.md file not found.');
+  }
+
+  // 3. Compile the typescript code
+  console.log('🧹 Cleaning build directory (dist/)...');
+  const distPath = path.join(basePath, 'dist');
+  if (fs.existsSync(distPath)) {
+    fs.rmSync(distPath, { recursive: true, force: true });
+  }
+
+  console.log('📦 Compiling code (npm run build)...');
+  execSync('npm run build', { stdio: 'inherit' });
+
+  // 4. Pack the package
+  console.log('📦 Packing npm package (npm pack)...');
+  const packOutput = execSync('npm pack', { encoding: 'utf-8' }).trim();
+  const lines = packOutput.split('\n');
+  const tgzFile = lines[lines.length - 1].trim();
+
+  // 5. Compute SHA-256 of the generated .tgz package
+  const tgzPath = path.join(basePath, tgzFile);
+  if (!fs.existsSync(tgzPath)) {
+    throw new Error(`Generated tarball file could not be found at: ${tgzPath}`);
+  }
+  const hash = crypto.createHash('sha256');
+  const fileBuffer = fs.readFileSync(tgzPath);
+  hash.update(fileBuffer);
+  const sha256 = hash.digest('hex');
+
+  console.log(`✅ Package generated: ${tgzFile}`);
+  console.log(`✅ SHA-256 Checksum: ${sha256}`);
+
+  // 6. Write release summary to RELEASE_NOTES.md
+  const releaseSummaryPath = path.join(basePath, 'RELEASE_NOTES.md');
+  const summaryContent = `### Changelog
+${releaseNotes}
+
+### Integrity Verification
+* **Artifact**: \`${tgzFile}\`
+* **SHA-256 Checksum**: \`${sha256}\`
+`;
+
+  fs.writeFileSync(releaseSummaryPath, summaryContent, 'utf-8');
+  console.log(`📝 Release notes and integrity checksum generated in RELEASE_NOTES.md`);
+} catch (error) {
+  console.error(`❌ Deployment packing failed: ${error.message}`);
+  process.exit(1);
+}

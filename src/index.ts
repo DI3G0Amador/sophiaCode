@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import 'dotenv/config';
-import { setupCommands } from './cli/commands.js';
+import { setupCommands } from './commands/commands.js';
 
 // Initialize and parse the command-line arguments
 const program = setupCommands();

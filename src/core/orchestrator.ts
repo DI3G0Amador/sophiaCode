@@ -1,12 +1,18 @@
 import * as p from '@clack/prompts';
-import { checkConfigExist, saveDocumentation, saveProjectConfig, readProjectConfig, saveRootBridgedFiles } from '../fs/writer.js';
-import { scanDirectory } from '../fs/scanner.js';
-import { analyzeWorkspaceLocally, formatAnalysisReport } from '../fs/analyzer.js';
-import { askSetupConfig } from '../cli/prompts.js';
-import { createAIService } from '../ai/providers.js';
-import { SYSTEM_PROMPT, buildUserPrompt } from '../ai/prompts.js';
-import { getRecommendation } from '../ai/recommendations.js';
-import { getApiKey, saveApiKey } from '../fs/global-config.js';
+import {
+  checkConfigExist,
+  saveDocumentation,
+  saveProjectConfig,
+  readProjectConfig,
+  saveRootBridgedFiles,
+} from './fs/writer.js';
+import { scanDirectory } from './fs/scanner.js';
+import { analyzeWorkspaceLocally, formatAnalysisReport } from './fs/analyzer.js';
+import { askSetupConfig } from '../commands/prompts.js';
+import { createAIService } from './ai/providers.js';
+import { SYSTEM_PROMPT, buildUserPrompt } from './ai/prompts.js';
+import { getRecommendation } from './ai/recommendations.js';
+import { getApiKey, saveApiKey } from './fs/global-config.js';
 
 /**
  * Main orchestration flow for the /init command.
@@ -40,7 +46,7 @@ export async function runInitFlow(basePath: string): Promise<void> {
 
   // 3. Resolve community recommendations for the chosen model
   const recommendation = getRecommendation(setupConfig.modelName);
-  
+
   const projectConfig = {
     provider: setupConfig.provider,
     modelName: setupConfig.modelName,
@@ -68,15 +74,17 @@ export async function runInitFlow(basePath: string): Promise<void> {
     resolvedApiKey = await getApiKey(projectConfig.provider);
 
     if (!resolvedApiKey) {
-      p.log.warn(`🔑 A chave de API para o provedor "${projectConfig.provider}" não foi detectada.`);
-      
+      p.log.warn(
+        `🔑 A chave de API para o provedor "${projectConfig.provider}" não foi detectada.`
+      );
+
       const promptKey = await p.password({
         message: `Por favor, digite sua chave de API para o provedor ${projectConfig.provider.toUpperCase()}:`,
         validate(value) {
           if (!value || value.trim().length === 0) {
             return 'A chave de API é obrigatória para prosseguir.';
           }
-        }
+        },
       });
 
       if (p.isCancel(promptKey)) {
@@ -88,7 +96,8 @@ export async function runInitFlow(basePath: string): Promise<void> {
 
       // Ask if the user wants to save it globally in ~/.sophiacode/config.json
       const saveGlobally = await p.confirm({
-        message: 'Deseja salvar esta chave de API globalmente para que funcione em outros projetos?',
+        message:
+          'Deseja salvar esta chave de API globalmente para que funcione em outros projetos?',
         initialValue: true,
       });
 
@@ -113,17 +122,19 @@ export async function runInitFlow(basePath: string): Promise<void> {
   // 5. Scan the workspace directory and run Local Static Analysis
   const scanSpinner = p.spinner();
   scanSpinner.start('Varrendo a estrutura e analisando os arquivos do projeto localmente...');
-  
+
   try {
     const files = await scanDirectory(basePath);
     const localAnalysis = await analyzeWorkspaceLocally(basePath, files);
     const analysisReport = formatAnalysisReport(localAnalysis);
-    
+
     scanSpinner.stop('Estrutura e dados do projeto mapeados e analisados localmente!');
 
     // 6. Generate configurations via the chosen AI Provider
     const aiSpinner = p.spinner();
-    aiSpinner.start(`A IA do SophiaCode (${projectConfig.modelName}) está processando a análise estática e gerando os arquivos de diretrizes...`);
+    aiSpinner.start(
+      `A IA do SophiaCode (${projectConfig.modelName}) está processando a análise estática e gerando os arquivos de diretrizes...`
+    );
 
     try {
       // Instantiate the decoupled AI service adapter, passing the resolved API key
@@ -140,47 +151,43 @@ export async function runInitFlow(basePath: string): Promise<void> {
       const responseSchema = {
         type: 'OBJECT',
         properties: {
-          mapContent: { 
+          mapContent: {
             type: 'STRING',
-            description: 'The complete markdown content for MAP.md'
+            description: 'The complete markdown content for MAP.md',
           },
-          agentsContent: { 
+          agentsContent: {
             type: 'STRING',
-            description: 'The complete markdown content for Agents.md'
+            description: 'The complete markdown content for Agents.md',
           },
           claudeContent: {
             type: 'STRING',
-            description: 'The complete markdown content for CLAUDE.md in the project root'
+            description: 'The complete markdown content for CLAUDE.md in the project root',
           },
           rootAgentsContent: {
             type: 'STRING',
-            description: 'The complete markdown content for AGENTS.md in the project root'
-          }
+            description: 'The complete markdown content for AGENTS.md in the project root',
+          },
         },
-        required: ['mapContent', 'agentsContent', 'claudeContent', 'rootAgentsContent']
+        required: ['mapContent', 'agentsContent', 'claudeContent', 'rootAgentsContent'],
       };
 
       // Ask LLM to generate the files conforming to the structured schema
-      const documentation = await aiService.generateStructured<{ 
-        mapContent: string; 
+      const documentation = await aiService.generateStructured<{
+        mapContent: string;
         agentsContent: string;
         claudeContent: string;
         rootAgentsContent: string;
-      }>(
-        SYSTEM_PROMPT,
-        userPrompt,
-        responseSchema
-      );
+      }>(SYSTEM_PROMPT, userPrompt, responseSchema);
 
       aiSpinner.stop('Documentação gerada com sucesso pela IA!');
 
       // 7. Persist the generated files on disk
       const saveSpinner = p.spinner();
       saveSpinner.start('Salvando arquivos de documentação e pontes com agentes locais...');
-      
+
       // Save internal configurations
       await saveDocumentation(basePath, documentation.mapContent, documentation.agentsContent);
-      
+
       // Save root bridged files to redirect Claude Code & OpenCode
       await saveRootBridgedFiles(
         basePath,
@@ -188,7 +195,7 @@ export async function runInitFlow(basePath: string): Promise<void> {
         documentation.rootAgentsContent,
         setupConfig.integrations
       );
-      
+
       saveSpinner.stop('Arquivos e pontes de agentes salvos com sucesso!');
 
       p.outro('🎉 SophiaCode inicializado com sucesso! Verifique a pasta "sophiAgents/".');

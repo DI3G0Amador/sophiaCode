@@ -6,14 +6,26 @@
   "bin": {
     "sophiacode": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "bin",
+    "config",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
-    "build": "tsc",
-    "test": "vitest src/",
-    "test:run": "vitest run src/"
+    "build": "tsc -p tsconfig.build.json",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest tests/",
+    "test:run": "vitest run tests/"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "description": "",
   "dependencies": {
     "@clack/prompts": "^1.6.0",
@@ -25,6 +37,10 @@
   },
   "devDependencies": {
     "@types/node": "^26.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
+    "eslint": "^10.5.0",
+    "prettier": "^3.8.4",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"

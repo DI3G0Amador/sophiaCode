@@ -4,9 +4,6 @@
     "target": "ES2022", /* Define qual versão do JS será gerada. ES2022 é moderno e suportado pelo Node recente. */
     "module": "NodeNext", /* Define como os módulos serão importados. NodeNext é o padrão para suportar ESM moderno no Node. */
     "moduleResolution": "NodeNext", /* Como o TypeScript procura os arquivos importados. NodeNext garante consistência com o Node. */
-    /* Configurações de compilação */
-    "outDir": "./dist", /* Onde o TypeScript colocará os arquivos JavaScript compilados prontos para produção. */
-    "rootDir": "./src", /* Onde fica o código-fonte original em TypeScript. */
     /* Strict Checks (Garantia de qualidade) */
     "strict": true, /* Ativa todas as verificações rígidas de tipo para evitar erros comuns em runtime. */
     "noImplicitAny": true, /* Impede que variáveis fiquem com tipo implícito 'any'. */
@@ -17,6 +14,7 @@
     "forceConsistentCasingInFileNames": true /* Garante que caminhos com maiúsculas/minúsculas diferentes não causem erros em SOs diferentes (Windows vs Linux). */
   },
   "include": [
-    "src/**/*"
-  ] /* Diz ao compilador para olhar apenas os arquivos dentro da pasta 'src'. */
+    "src/**/*",
+    "tests/**/*"
+  ] /* Diz ao compilador para olhar os arquivos dentro de src e tests. */
 }
