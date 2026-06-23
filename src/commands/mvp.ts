@@ -10,6 +10,18 @@ import { MVP_SYSTEM_PROMPT, buildMvpPrompt, MVP_SCHEMA } from '../core/ai/prompt
 import { getApiKey } from '../core/fs/global-config.js';
 import { t } from '../core/i18n.js';
 
+function slugify(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
 export async function runMvpCommand(basePath: string): Promise<void> {
   // 1. Verify that the context has been initialized first
   const initialized = await checkConfigExist(basePath);
@@ -35,21 +47,24 @@ export async function runMvpCommand(basePath: string): Promise<void> {
     return;
   }
 
-  const key = await p.text({
+  const derivedKey = slugify(name);
+  let key = await p.text({
     message: t('mvp_key_prompt'),
     placeholder: 'Ex: stripe-payments',
+    initialValue: derivedKey,
     validate(value) {
       if (!value || value.trim().length === 0) {
         return t('mvp_key_validation');
-      }
-      if (!/^[a-z0-9-]+$/.test(value)) {
-        return t('mvp_key_regex_error');
       }
     },
   });
   if (p.isCancel(key)) {
     p.outro(t('cancel_generic'));
     return;
+  }
+  key = slugify(key);
+  if (!key || key.length === 0) {
+    key = `mvp-${Date.now()}`;
   }
 
   const objective = await p.text({
