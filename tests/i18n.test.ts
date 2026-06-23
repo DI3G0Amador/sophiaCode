@@ -14,10 +14,10 @@ describe('i18n Translation Engine', () => {
 
   it('should translate simple keys correctly in English and Portuguese', () => {
     I18n.setLanguage('en');
-    expect(t('welcome_intro')).toBe('👋 Welcome to SophiaCode setup!');
+    expect(t('welcome_intro')).toBe('Welcome to SophiaCode setup!');
 
     I18n.setLanguage('pt');
-    expect(t('welcome_intro')).toBe('👋 Bem-vindo à configuração do SophiaCode!');
+    expect(t('welcome_intro')).toBe('Bem-vindo à configuração do SophiaCode!');
   });
 
   it('should interpolate single arguments correctly', () => {
@@ -35,12 +35,12 @@ describe('i18n Translation Engine', () => {
   it('should interpolate multiple arguments correctly', () => {
     I18n.setLanguage('en');
     expect(t('task_outro', 'Auth System', 4)).toBe(
-      '🎉 Done! The MVP "Auth System" has been split into 4 tasks. Run "sophiacode dev" to manage progress.'
+      'Done! The MVP "Auth System" has been split into 4 tasks. Run "sophiacode dev" to manage progress.'
     );
 
     I18n.setLanguage('pt');
     expect(t('task_outro', 'Sistema de Autenticação', 4)).toBe(
-      '🎉 Concluído! O MVP "Sistema de Autenticação" foi quebrado em 4 tarefas. Rode "sophiacode dev" para gerenciar o progresso.'
+      'Concluído! O MVP "Sistema de Autenticação" foi quebrado em 4 tarefas. Rode "sophiacode dev" para gerenciar o progresso.'
     );
   });
 });
