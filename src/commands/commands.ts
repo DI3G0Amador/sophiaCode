@@ -1,5 +1,9 @@
 import { Command } from 'commander';
 import { runInitFlow } from '../core/orchestrator.js';
+import { runMvpCommand } from './mvp.js';
+import { runTaskCommand } from './task.js';
+import { runDevCommand } from './dev.js';
+import { runSkillCommand } from './skill.js';
 
 /**
  * Configures the commands for the CLI using Commander.
@@ -15,7 +19,7 @@ export function setupCommands(): Command {
   // Command: init
   program
     .command('init')
-    .description('Initialize sophiAgents configuration inside the workspace')
+    .description('Initialize sophiAgents configuration and run sophiaContext gap discovery')
     .action(async () => {
       try {
         const basePath = process.cwd();
@@ -26,36 +30,60 @@ export function setupCommands(): Command {
       }
     });
 
-  // Command: mvp (placeholder)
+  // Command: mvp
   program
     .command('mvp')
-    .description('Design and specify a Minimum Viable Product context (coming soon)')
-    .action(() => {
-      console.log('📦 The "mvp" command is under development. Coming soon!');
+    .description('Design and specify a Minimum Viable Product context using interactive prompts')
+    .action(async () => {
+      try {
+        const basePath = process.cwd();
+        await runMvpCommand(basePath);
+      } catch (error) {
+        console.error('An unexpected error occurred during MVP creation:', error);
+        process.exit(1);
+      }
     });
 
-  // Command: task (placeholder)
+  // Command: task
   program
     .command('task')
-    .description('Manage agent backlog tasks and checklists (coming soon)')
-    .action(() => {
-      console.log('📋 The "task" command is under development. Coming soon!');
+    .description('Break down an MVP specification into planned tasks and checklists')
+    .action(async () => {
+      try {
+        const basePath = process.cwd();
+        await runTaskCommand(basePath);
+      } catch (error) {
+        console.error('An unexpected error occurred during task planning:', error);
+        process.exit(1);
+      }
     });
 
-  // Command: skill (placeholder)
-  program
-    .command('skill')
-    .description('Configure specific behavioral rules and tools for agents (coming soon)')
-    .action(() => {
-      console.log('🛠️ The "skill" command is under development. Coming soon!');
-    });
-
-  // Command: dev (placeholder)
+  // Command: dev
   program
     .command('dev')
-    .description('Run local dev server with active agent watchers (coming soon)')
-    .action(() => {
-      console.log('💻 The "dev" command is under development. Coming soon!');
+    .description('Modo Engenheiro - Interactive checklist and next subtask guidance')
+    .action(async () => {
+      try {
+        const basePath = process.cwd();
+        await runDevCommand(basePath);
+      } catch (error) {
+        console.error('An unexpected error occurred during engineering mode execution:', error);
+        process.exit(1);
+      }
+    });
+
+  // Command: skill
+  program
+    .command('skill')
+    .description('Initialize MCP server configs or local automation templates')
+    .action(async () => {
+      try {
+        const basePath = process.cwd();
+        await runSkillCommand(basePath);
+      } catch (error) {
+        console.error('An unexpected error occurred during skill setup:', error);
+        process.exit(1);
+      }
     });
 
   return program;

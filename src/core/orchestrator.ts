@@ -10,12 +10,19 @@ import { scanDirectory } from './fs/scanner.js';
 import { analyzeWorkspaceLocally, formatAnalysisReport } from './fs/analyzer.js';
 import { askSetupConfig } from '../commands/prompts.js';
 import { createAIService } from './ai/providers.js';
-import { SYSTEM_PROMPT, buildUserPrompt } from './ai/prompts.js';
+import {
+  DISCOVERY_SYSTEM_PROMPT,
+  buildDiscoveryPrompt,
+  DISCOVERY_SCHEMA,
+  SYSTEM_PROMPT,
+  buildContextPrompt,
+  FINAL_CONTEXT_SCHEMA,
+} from './ai/prompts.js';
 import { getRecommendation } from './ai/recommendations.js';
 import { getApiKey, saveApiKey } from './fs/global-config.js';
 
 /**
- * Main orchestration flow for the /init command.
+ * Main orchestration flow for the init (sophiaContext alignment) command.
  */
 export async function runInitFlow(basePath: string): Promise<void> {
   // 1. Check if the configuration files already exist
@@ -41,45 +48,38 @@ export async function runInitFlow(basePath: string): Promise<void> {
     // Ignore: config.json does not exist yet (normal on first run)
   }
 
-  // 2. Collect guidelines and model preferences from the user, pre-populated with existing configs if available
+  // 2. Collect model preferences from the user
   const setupConfig = await askSetupConfig(existingConfig);
 
   // 3. Resolve community recommendations for the chosen model
   const recommendation = getRecommendation(setupConfig.modelName);
 
-  const projectConfig = {
+  const tempProjectConfig = {
     provider: setupConfig.provider,
     modelName: setupConfig.modelName,
     temperature: recommendation.temperature,
     contextLimit: recommendation.contextLimit,
     contextStrategy: recommendation.contextStrategy,
-    // Preserve the user guidelines inside config.json so they can be reloaded next time
-    objective: setupConfig.objective,
-    outOfScope: setupConfig.outOfScope,
-    acceptableErrors: setupConfig.acceptableErrors,
     integrations: setupConfig.integrations,
   };
 
-  // Immediately save the configuration to config.json.
-  // This ensures that even if AI generation fails, the user's answers are saved for next time!
+  // Immediately save the configuration placeholder to config.json.
   try {
-    await saveProjectConfig(basePath, projectConfig);
+    await saveProjectConfig(basePath, tempProjectConfig);
   } catch (error) {
     p.log.error(`Não foi possível salvar o config.json temporário: ${(error as Error).message}`);
   }
 
-  // 4. Handle API Key resolution for cloud providers (Ollama runs locally and does not require keys)
+  // 4. Handle API Key resolution for cloud providers
   let resolvedApiKey: string | undefined = undefined;
-  if (projectConfig.provider !== 'ollama') {
-    resolvedApiKey = await getApiKey(projectConfig.provider);
+  if (setupConfig.provider !== 'ollama') {
+    resolvedApiKey = await getApiKey(setupConfig.provider);
 
     if (!resolvedApiKey) {
-      p.log.warn(
-        `🔑 A chave de API para o provedor "${projectConfig.provider}" não foi detectada.`
-      );
+      p.log.warn(`🔑 A chave de API para o provedor "${setupConfig.provider}" não foi detectada.`);
 
       const promptKey = await p.password({
-        message: `Por favor, digite sua chave de API para o provedor ${projectConfig.provider.toUpperCase()}:`,
+        message: `Por favor, digite sua chave de API para o provedor ${setupConfig.provider.toUpperCase()}:`,
         validate(value) {
           if (!value || value.trim().length === 0) {
             return 'A chave de API é obrigatória para prosseguir.';
@@ -94,7 +94,6 @@ export async function runInitFlow(basePath: string): Promise<void> {
 
       resolvedApiKey = promptKey;
 
-      // Ask if the user wants to save it globally in ~/.sophiacode/config.json
       const saveGlobally = await p.confirm({
         message:
           'Deseja salvar esta chave de API globalmente para que funcione em outros projetos?',
@@ -107,106 +106,161 @@ export async function runInitFlow(basePath: string): Promise<void> {
       }
 
       if (saveGlobally) {
-        await saveApiKey(projectConfig.provider, resolvedApiKey);
+        await saveApiKey(setupConfig.provider, resolvedApiKey);
         p.log.success('Chave de API salva globalmente com sucesso!');
       }
     }
   }
 
   p.log.info(`🤖 Recomendações da Comunidade Aplicadas para "${setupConfig.modelName}":`);
-  p.log.step(`• Estratégia de Contexto: ${projectConfig.contextStrategy}`);
-  p.log.step(`• Temperatura: ${projectConfig.temperature}`);
-  p.log.step(`• Limite de Contexto: ${projectConfig.contextLimit.toLocaleString()} tokens`);
-  p.log.step(`• Detalhes: ${recommendation.description}`);
+  p.log.step(`• Estratégia de Contexto: ${tempProjectConfig.contextStrategy}`);
+  p.log.step(`• Temperatura: ${tempProjectConfig.temperature}`);
+  p.log.step(`• Limite de Contexto: ${tempProjectConfig.contextLimit.toLocaleString()} tokens`);
 
   // 5. Scan the workspace directory and run Local Static Analysis
   const scanSpinner = p.spinner();
   scanSpinner.start('Varrendo a estrutura e analisando os arquivos do projeto localmente...');
 
+  let analysisReport = '';
   try {
     const files = await scanDirectory(basePath);
     const localAnalysis = await analyzeWorkspaceLocally(basePath, files);
-    const analysisReport = formatAnalysisReport(localAnalysis);
-
+    analysisReport = formatAnalysisReport(localAnalysis);
     scanSpinner.stop('Estrutura e dados do projeto mapeados e analisados localmente!');
-
-    // 6. Generate configurations via the chosen AI Provider
-    const aiSpinner = p.spinner();
-    aiSpinner.start(
-      `A IA do SophiaCode (${projectConfig.modelName}) está processando a análise estática e gerando os arquivos de diretrizes...`
-    );
-
-    try {
-      // Instantiate the decoupled AI service adapter, passing the resolved API key
-      const aiService = createAIService({
-        provider: projectConfig.provider,
-        modelName: projectConfig.modelName,
-        temperature: projectConfig.temperature,
-        apiKey: resolvedApiKey,
-      });
-
-      // Build the prompt containing the local analysis report instead of raw directory tree
-      const userPrompt = buildUserPrompt(setupConfig, analysisReport);
-
-      const responseSchema = {
-        type: 'OBJECT',
-        properties: {
-          mapContent: {
-            type: 'STRING',
-            description: 'The complete markdown content for MAP.md',
-          },
-          agentsContent: {
-            type: 'STRING',
-            description: 'The complete markdown content for Agents.md',
-          },
-          claudeContent: {
-            type: 'STRING',
-            description: 'The complete markdown content for CLAUDE.md in the project root',
-          },
-          rootAgentsContent: {
-            type: 'STRING',
-            description: 'The complete markdown content for AGENTS.md in the project root',
-          },
-        },
-        required: ['mapContent', 'agentsContent', 'claudeContent', 'rootAgentsContent'],
-      };
-
-      // Ask LLM to generate the files conforming to the structured schema
-      const documentation = await aiService.generateStructured<{
-        mapContent: string;
-        agentsContent: string;
-        claudeContent: string;
-        rootAgentsContent: string;
-      }>(SYSTEM_PROMPT, userPrompt, responseSchema);
-
-      aiSpinner.stop('Documentação gerada com sucesso pela IA!');
-
-      // 7. Persist the generated files on disk
-      const saveSpinner = p.spinner();
-      saveSpinner.start('Salvando arquivos de documentação e pontes com agentes locais...');
-
-      // Save internal configurations
-      await saveDocumentation(basePath, documentation.mapContent, documentation.agentsContent);
-
-      // Save root bridged files to redirect Claude Code & OpenCode
-      await saveRootBridgedFiles(
-        basePath,
-        documentation.claudeContent,
-        documentation.rootAgentsContent,
-        setupConfig.integrations
-      );
-
-      saveSpinner.stop('Arquivos e pontes de agentes salvos com sucesso!');
-
-      p.outro('🎉 SophiaCode inicializado com sucesso! Verifique a pasta "sophiAgents/".');
-    } catch (error) {
-      aiSpinner.stop('A geração por IA falhou!');
-      p.log.error(`Erro: ${(error as Error).message}`);
-      p.outro('A configuração falhou.');
-    }
   } catch (error) {
     scanSpinner.stop('A análise local falhou!');
     p.log.error(`Erro na análise estática: ${(error as Error).message}`);
+    p.outro('A configuração falhou.');
+    return;
+  }
+
+  // 6. Stage 1: AI Gap Discovery
+  const discoverySpinner = p.spinner();
+  discoverySpinner.start(
+    'A IA do SophiaCode está analisando a estrutura para descobrir o propósito e lacunas de contexto...'
+  );
+
+  let discoveryResult: { detectedPurpose: string; questions: { id: string; question: string }[] };
+  try {
+    const aiService = createAIService({
+      provider: setupConfig.provider,
+      modelName: setupConfig.modelName,
+      temperature: tempProjectConfig.temperature,
+      apiKey: resolvedApiKey,
+    });
+
+    discoveryResult = await aiService.generateStructured<{
+      detectedPurpose: string;
+      questions: { id: string; question: string }[];
+    }>(DISCOVERY_SYSTEM_PROMPT, buildDiscoveryPrompt(analysisReport), DISCOVERY_SCHEMA);
+    discoverySpinner.stop('Análise de lacunas concluída!');
+  } catch (error) {
+    discoverySpinner.stop('A análise de lacunas por IA falhou!');
+    p.log.error(`Erro: ${(error as Error).message}`);
+    p.outro('A configuração falhou.');
+    return;
+  }
+
+  // 7. Interactive Questionnaire
+  p.log.info('✨ Propósito Detectado pela IA:');
+  p.log.step(discoveryResult.detectedPurpose);
+
+  const adjustedPurpose = await p.text({
+    message: 'Confirme ou ajuste o propósito geral detectado para o projeto:',
+    initialValue: discoveryResult.detectedPurpose,
+    validate(value) {
+      if (!value || value.trim().length === 0) {
+        return 'O propósito do projeto é obrigatório.';
+      }
+    },
+  });
+
+  if (p.isCancel(adjustedPurpose)) {
+    p.outro('Configuração interrompida pelo usuário.');
+    return;
+  }
+
+  const answers: { question: string; answer: string }[] = [];
+  p.log.info('🎯 Responda a 3 perguntas chave para fechar lacunas e evitar contexto fraco:');
+
+  for (let i = 0; i < discoveryResult.questions.length; i++) {
+    const q = discoveryResult.questions[i];
+    const answer = await p.text({
+      message: `[${i + 1}/3] ${q.question}`,
+      validate(value) {
+        if (!value || value.trim().length === 0) {
+          return 'Esta resposta é obrigatória para garantir um contexto forte.';
+        }
+      },
+    });
+
+    if (p.isCancel(answer)) {
+      p.outro('Configuração interrompida pelo usuário.');
+      return;
+    }
+
+    answers.push({ question: q.question, answer });
+  }
+
+  // 8. Stage 2: Final Context Generation
+  const contextSpinner = p.spinner();
+  contextSpinner.start(
+    'Processando suas respostas e gerando os arquivos de diretrizes finais (sophiaContext)...'
+  );
+
+  try {
+    const aiService = createAIService({
+      provider: setupConfig.provider,
+      modelName: setupConfig.modelName,
+      temperature: tempProjectConfig.temperature,
+      apiKey: resolvedApiKey,
+    });
+
+    const finalContext = await aiService.generateStructured<{
+      architectureContent: string;
+      patternsContent: string;
+      claudeContent: string;
+      rootAgentsContent: string;
+    }>(
+      SYSTEM_PROMPT,
+      buildContextPrompt(adjustedPurpose, answers, analysisReport),
+      FINAL_CONTEXT_SCHEMA
+    );
+
+    contextSpinner.stop('Diretrizes e contexto do repositório gerados com sucesso!');
+
+    // 9. Persist the generated files and final config on disk
+    const saveSpinner = p.spinner();
+    saveSpinner.start('Gravando documentação do sophiaContext e pontes de agentes...');
+
+    // Save context files (architecture.md and coding-patterns.md) under context/
+    await saveDocumentation(
+      basePath,
+      finalContext.architectureContent,
+      finalContext.patternsContent
+    );
+
+    // Save root bridges (CLAUDE.md and AGENTS.md)
+    await saveRootBridgedFiles(
+      basePath,
+      finalContext.claudeContent,
+      finalContext.rootAgentsContent,
+      setupConfig.integrations
+    );
+
+    // Save final configuration including purpose and alignment QA
+    const finalProjectConfig = {
+      ...tempProjectConfig,
+      detectedPurpose: adjustedPurpose,
+      alignmentQA: answers,
+    };
+    await saveProjectConfig(basePath, finalProjectConfig);
+
+    saveSpinner.stop('Arquivos de contexto e pontes gravados no disco!');
+    p.outro('🎉 SophiaCode inicializado com sucesso! Contexto gerado na pasta "sophiAgents/".');
+  } catch (error) {
+    contextSpinner.stop('A geração do sophiaContext falhou!');
+    p.log.error(`Erro: ${(error as Error).message}`);
     p.outro('A configuração falhou.');
   }
 }

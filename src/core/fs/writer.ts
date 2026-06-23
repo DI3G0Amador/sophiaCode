@@ -12,45 +12,51 @@ function getConfigDirectory(basePath: string): string {
 }
 
 /**
- * Checks if the sophiAgents folder and its core documentation files (MAP.md and Agents.md) exist.
- * Returns true only if the folder and BOTH files are present.
+ * Checks if the sophiAgents folder and its core documentation files (architecture.md and coding-patterns.md) exist.
+ * Returns true only if the folder and BOTH files are present under context/.
  */
 export async function checkConfigExist(basePath: string): Promise<boolean> {
   const configDir = getConfigDirectory(basePath);
-  const mapPath = path.join(configDir, 'MAP.md');
-  const agentsPath = path.join(configDir, 'Agents.md');
+  const contextDir = path.join(configDir, 'context');
+  const architecturePath = path.join(contextDir, 'architecture.md');
+  const patternsPath = path.join(contextDir, 'coding-patterns.md');
 
   try {
-    // Check if the directory and files exist using fs.access
     await fs.access(configDir);
-    await fs.access(mapPath);
-    await fs.access(agentsPath);
+    await fs.access(contextDir);
+    await fs.access(architecturePath);
+    await fs.access(patternsPath);
     return true;
   } catch {
-    // If any access check fails (throws an error), they do not exist
     return false;
   }
 }
 
 /**
- * Creates the sophiAgents directory (if not exists) and saves the generated
- * MAP.md and Agents.md files.
+ * Creates the sophiAgents directory, its subdirectories (context, mvps, tasks, skills, memory),
+ * and saves the generated architecture.md and coding-patterns.md files under context/.
  */
 export async function saveDocumentation(
   basePath: string,
-  mapContent: string,
-  agentsContent: string
+  architectureContent: string,
+  patternsContent: string
 ): Promise<void> {
   const configDir = getConfigDirectory(basePath);
-  const mapPath = path.join(configDir, 'MAP.md');
-  const agentsPath = path.join(configDir, 'Agents.md');
 
-  // Ensure the directory exists (recursive: true makes sure it won't throw if it already exists)
-  await fs.mkdir(configDir, { recursive: true });
+  // Define subdirectories to initialize
+  const subDirs = ['context', 'mvps', 'tasks', 'skills', 'memory'];
 
-  // Write files with UTF-8 encoding
-  await fs.writeFile(mapPath, mapContent, 'utf-8');
-  await fs.writeFile(agentsPath, agentsContent, 'utf-8');
+  // Ensure all directories exist
+  for (const dir of subDirs) {
+    await fs.mkdir(path.join(configDir, dir), { recursive: true });
+  }
+
+  const architecturePath = path.join(configDir, 'context', 'architecture.md');
+  const patternsPath = path.join(configDir, 'context', 'coding-patterns.md');
+
+  // Write core documentation files
+  await fs.writeFile(architecturePath, architectureContent, 'utf-8');
+  await fs.writeFile(patternsPath, patternsContent, 'utf-8');
 }
 
 /**
@@ -80,7 +86,7 @@ async function writeOrRedirectFile(
       `> [!IMPORTANT]\n` +
       `> This project uses **SophiaCode** for architecture mapping and rules.\n` +
       `> For the complete objective, file map, out-of-scope rules, and active feature specs,\n` +
-      `> please refer to [sophiAgents/MAP.md](sophiAgents/MAP.md) and [sophiAgents/Agents.md](sophiAgents/Agents.md).\n\n` +
+      `> please refer to [sophiAgents/context/architecture.md](sophiAgents/context/architecture.md) and [sophiAgents/context/coding-patterns.md](sophiAgents/context/coding-patterns.md).\n\n` +
       `---\n\n` +
       existingContent;
 
@@ -111,19 +117,19 @@ export async function saveRootBridgedFiles(
 }
 
 /**
- * Reads the MAP.md file from the sophiAgents directory.
+ * Reads the architecture.md file from the sophiAgents/context/ directory.
  */
 export async function readMapFile(basePath: string): Promise<string> {
-  const mapPath = path.join(getConfigDirectory(basePath), 'MAP.md');
-  return await fs.readFile(mapPath, 'utf-8');
+  const architecturePath = path.join(getConfigDirectory(basePath), 'context', 'architecture.md');
+  return await fs.readFile(architecturePath, 'utf-8');
 }
 
 /**
- * Overwrites the MAP.md file (useful for the /edit command).
+ * Overwrites the architecture.md file (useful for context updates).
  */
 export async function writeMapFile(basePath: string, content: string): Promise<void> {
-  const mapPath = path.join(getConfigDirectory(basePath), 'MAP.md');
-  await fs.writeFile(mapPath, content, 'utf-8');
+  const architecturePath = path.join(getConfigDirectory(basePath), 'context', 'architecture.md');
+  await fs.writeFile(architecturePath, content, 'utf-8');
 }
 
 /**
@@ -143,4 +149,105 @@ export async function readProjectConfig(basePath: string): Promise<any> {
   const configPath = path.join(getConfigDirectory(basePath), 'config.json');
   const content = await fs.readFile(configPath, 'utf-8');
   return JSON.parse(content);
+}
+
+/**
+ * Saves an MVP specification JSON under sophiAgents/mvps/.
+ */
+export async function saveMvpConfig(basePath: string, key: string, mvpData: any): Promise<void> {
+  const mvpsDir = path.join(getConfigDirectory(basePath), 'mvps');
+  await fs.mkdir(mvpsDir, { recursive: true });
+  await fs.writeFile(path.join(mvpsDir, `${key}.json`), JSON.stringify(mvpData, null, 2), 'utf-8');
+}
+
+/**
+ * Reads an MVP specification JSON from sophiAgents/mvps/.
+ */
+export async function readMvpConfig(basePath: string, key: string): Promise<any> {
+  const filePath = path.join(getConfigDirectory(basePath), 'mvps', `${key}.json`);
+  const content = await fs.readFile(filePath, 'utf-8');
+  return JSON.parse(content);
+}
+
+/**
+ * Lists all MVP keys (filenames without .json) under sophiAgents/mvps/.
+ */
+export async function listMvpConfigs(basePath: string): Promise<string[]> {
+  const mvpsDir = path.join(getConfigDirectory(basePath), 'mvps');
+  try {
+    const files = await fs.readdir(mvpsDir);
+    return files.filter((f) => f.endsWith('.json')).map((f) => f.replace('.json', ''));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Saves a task breakdown structure: creates a directory and writes both plan.md and subtasks.json.
+ */
+export async function saveTask(
+  basePath: string,
+  taskIndex: string,
+  taskSlug: string,
+  planContent: string,
+  subtasks: any[]
+): Promise<void> {
+  const taskDir = path.join(getConfigDirectory(basePath), 'tasks', `task-${taskIndex}-${taskSlug}`);
+  await fs.mkdir(taskDir, { recursive: true });
+  await fs.writeFile(path.join(taskDir, 'plan.md'), planContent, 'utf-8');
+  await fs.writeFile(
+    path.join(taskDir, 'subtasks.json'),
+    JSON.stringify(subtasks, null, 2),
+    'utf-8'
+  );
+}
+
+/**
+ * Lists all task directory names (task-*) under sophiAgents/tasks/.
+ */
+export async function listTasks(basePath: string): Promise<string[]> {
+  const tasksDir = path.join(getConfigDirectory(basePath), 'tasks');
+  try {
+    const entries = await fs.readdir(tasksDir, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith('task-'))
+      .map((entry) => entry.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Reads the subtasks checklist JSON for a specific task.
+ */
+export async function readTaskSubtasks(basePath: string, taskDirName: string): Promise<any[]> {
+  const filePath = path.join(getConfigDirectory(basePath), 'tasks', taskDirName, 'subtasks.json');
+  const content = await fs.readFile(filePath, 'utf-8');
+  return JSON.parse(content);
+}
+
+/**
+ * Writes/overwrites the subtasks checklist JSON for a specific task.
+ */
+export async function writeTaskSubtasks(
+  basePath: string,
+  taskDirName: string,
+  subtasks: any[]
+): Promise<void> {
+  const filePath = path.join(getConfigDirectory(basePath), 'tasks', taskDirName, 'subtasks.json');
+  await fs.writeFile(filePath, JSON.stringify(subtasks, null, 2), 'utf-8');
+}
+
+/**
+ * Saves local MCP configurations in sophiAgents/skills/mcp-config.json.
+ */
+export async function saveSkillConfig(basePath: string, mcpConfig: any): Promise<void> {
+  const skillsDir = path.join(getConfigDirectory(basePath), 'skills');
+  await fs.mkdir(skillsDir, { recursive: true });
+  await fs.writeFile(
+    path.join(skillsDir, 'mcp-config.json'),
+    JSON.stringify(mcpConfig, null, 2),
+    'utf-8'
+  );
 }

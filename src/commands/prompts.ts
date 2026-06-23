@@ -8,48 +8,21 @@ export interface UserRules {
   acceptableErrors: string;
 }
 
-export interface SetupConfig extends UserRules {
+export interface SetupConfig {
   provider: AIProvider;
   modelName: string;
   integrations: ('claude' | 'opencode')[];
 }
 
 /**
- * Initiates an interactive terminal questionnaire to collect project guidelines, model preferences, and integrations.
+ * Initiates an interactive terminal questionnaire to collect provider preferences and integrations.
  * Accepts defaultValues to prepopulate prompts if the user has already ran setup.
  */
 export async function askSetupConfig(defaultValues?: Partial<SetupConfig>): Promise<SetupConfig> {
   p.intro('👋 Bem-vindo à configuração do SophiaCode!');
 
-  const rules = await p.group(
+  const config = await p.group(
     {
-      objective: () =>
-        p.text({
-          message: 'Qual é o objetivo principal deste projeto?',
-          placeholder: 'Ex: Criar um bot que envia promoções do Telegram de um grupo para outro',
-          initialValue: defaultValues?.objective,
-          validate(value) {
-            if (!value || value.trim().length === 0) {
-              return 'O objetivo é obrigatório para gerar as regras do agente.';
-            }
-          },
-        }),
-
-      outOfScope: () =>
-        p.text({
-          message: 'O que está FORA de escopo para este projeto? (Opcional)',
-          placeholder:
-            'Ex: Não enviar mensagens de conversas comuns, não coletar respostas de usuários',
-          initialValue: defaultValues?.outOfScope,
-        }),
-
-      acceptableErrors: () =>
-        p.text({
-          message: 'Quais são os erros aceitáveis ou restrições do projeto? (Opcional)',
-          placeholder: 'Ex: Bugs menores no log são aceitáveis, mock de dados é permitido',
-          initialValue: defaultValues?.acceptableErrors,
-        }),
-
       provider: () =>
         p.select({
           message: 'Qual Provedor de IA você deseja usar?',
@@ -120,5 +93,5 @@ export async function askSetupConfig(defaultValues?: Partial<SetupConfig>): Prom
     }
   );
 
-  return rules as SetupConfig;
+  return config as SetupConfig;
 }
