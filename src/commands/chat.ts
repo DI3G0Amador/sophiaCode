@@ -1,13 +1,13 @@
 import * as p from '@clack/prompts';
 import fs from 'fs/promises';
 import path from 'path';
-import readline from 'readline';
 import { t } from '../core/i18n.js';
 import {
   checkConfigExist,
   readProjectConfig,
   saveMvpConfig,
   listMvpConfigs,
+  saveProjectConfig,
 } from '../core/fs/writer.js';
 import { listTasks } from '../core/fs/writer.js';
 import { createAIService } from '../core/ai/providers.js';
@@ -17,74 +17,36 @@ import {
   CHAT_SCHEMA,
   buildChatPrompt,
 } from '../core/ai/prompts.js';
+import { askMultilinePreserved } from '../core/cli/input-handler.js';
 
-/**
- * Custom multiline text prompt that supports line continuation using backslash '\'.
- */
-async function askMultiline(message: string, placeholder = ''): Promise<string | symbol> {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-      prompt: '│  ',
-    });
-
-    console.log(`\n◇  ${message}`);
-    if (placeholder) {
-      console.log(`│  \x1b[90m${placeholder}\x1b[0m`);
-    }
-    rl.prompt();
-
-    const lines: string[] = [];
-
-    const onLine = (line: string) => {
-      if (line.endsWith('\\')) {
-        lines.push(line.slice(0, -1));
-        rl.setPrompt('│  ');
-        rl.prompt();
-      } else {
-        lines.push(line);
-        rl.close();
-      }
-    };
-
-    rl.on('line', onLine);
-
-    rl.on('close', () => {
-      const fullText = lines.join('\n').trim();
-      if (!fullText) {
-        resolve(Symbol('cancel'));
-      } else {
-        resolve(fullText);
-      }
-    });
-
-    rl.on('SIGINT', () => {
-      rl.close();
-      resolve(Symbol('cancel'));
-    });
-  });
-}
-
-export async function runChatCommand(basePath: string): Promise<void> {
-  const initialized = await checkConfigExist(basePath);
-  if (!initialized) {
-    p.log.error(t('chat_error_init'));
-    return;
-  }
-
-  p.intro(t('chat_intro'));
-
+export async function runChatSession(
+  basePath: string,
+  initialBuffer = ''
+): Promise<{ text: string; toggleMode: boolean; canceled: boolean }> {
+  let buffer = initialBuffer;
   const history: { role: 'user' | 'assistant'; content: string }[] = [];
 
   while (true) {
-    const userInput = await askMultiline(
+    const result = await askMultilinePreserved(
       t('chat_message_prompt'),
+      buffer,
       'Ex: Crie um MVP de carrinho de compras / Crie uma skill de busca'
     );
 
-    if (p.isCancel(userInput)) {
-      break;
+    if (result.canceled) {
+      return { text: '', toggleMode: false, canceled: true };
+    }
+
+    if (result.toggleMode) {
+      return { text: result.text, toggleMode: true, canceled: false };
+    }
+
+    const userInput = result.text;
+    buffer = ''; // Reset buffer since it was successfully submitted
+
+    // Check if they want to exit
+    if (userInput === 'exit' || userInput === 'sair' || userInput === 'quit') {
+      return { text: '', toggleMode: false, canceled: true };
     }
 
     if (
@@ -93,12 +55,15 @@ export async function runChatCommand(basePath: string): Promise<void> {
       userInput === 'voltar' ||
       userInput === 'back'
     ) {
-      break;
+      return { text: '', toggleMode: true, canceled: false };
     }
 
-    if (userInput === 'exit' || userInput === 'sair' || userInput === 'quit') {
-      p.outro(t('dashboard_outro'));
-      process.exit(0);
+    // Handle Slash Commands
+    if (userInput.startsWith('/')) {
+      const handled = await handleSlashCommand(basePath, userInput);
+      if (handled) {
+        continue;
+      }
     }
 
     const spinner = p.spinner();
@@ -119,10 +84,8 @@ export async function runChatCommand(basePath: string): Promise<void> {
       const existingMvpKeys = await listMvpConfigs(basePath);
       const existingTasksList = await listTasks(basePath);
 
-      // Append user prompt to history
       history.push({ role: 'user', content: userInput });
 
-      // Build conversation history block
       const conversationHistory = history
         .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
         .join('\n\n');
@@ -136,21 +99,16 @@ export async function runChatCommand(basePath: string): Promise<void> {
       );
 
       spinner.stop('AI Response:');
-
-      // Show message
       p.note(aiResult.message, 'SophiaCode Assistant');
-
-      // Append assistant response to history
       history.push({ role: 'assistant', content: aiResult.message });
 
-      // Handle Action CREATE_MVP
+      // Execute AI Actions
       if (aiResult.action === 'CREATE_MVP') {
         const mvpSpinner = p.spinner();
         mvpSpinner.start(`Salvando MVP "${aiResult.mvpData.name}"...`);
         await saveMvpConfig(basePath, aiResult.mvpData.key, aiResult.mvpData);
         mvpSpinner.stop(`MVP salvo em: sophiAgents/mvps/${aiResult.mvpData.key}.json`);
 
-        // Check if Jira is configured, and prompt to export
         const { isJiraConfigured, createJiraIssue } = await import('../core/mcp/jiraServer.js');
         const jiraActive = await isJiraConfigured(basePath);
         if (jiraActive) {
@@ -177,16 +135,13 @@ export async function runChatCommand(basePath: string): Promise<void> {
             p.log.success(`✅ Epic/Story criada no Jira: ${issue.key}`);
           }
         }
-      }
-      // Handle Action PLAN_MVP_TASKS
-      else if (aiResult.action === 'PLAN_MVP_TASKS') {
+      } else if (aiResult.action === 'PLAN_MVP_TASKS') {
         const taskSpinner = p.spinner();
         taskSpinner.start(`Planejando tarefas para o MVP "${aiResult.planMvpKey}"...`);
         const { planTasksForMvp } = await import('./task.js');
         const { tasks } = await planTasksForMvp(basePath, aiResult.planMvpKey);
         taskSpinner.stop(`Breakdown concluído. Geradas ${tasks.length} tarefas.`);
 
-        // Ask for Jira export
         const { isJiraConfigured, createJiraIssue } = await import('../core/mcp/jiraServer.js');
         const jiraActive = await isJiraConfigured(basePath);
         if (jiraActive) {
@@ -228,9 +183,7 @@ export async function runChatCommand(basePath: string): Promise<void> {
             }
           }
         }
-      }
-      // Handle Action CREATE_SKILL
-      else if (aiResult.action === 'CREATE_SKILL') {
+      } else if (aiResult.action === 'CREATE_SKILL') {
         const skillSpinner = p.spinner();
         skillSpinner.start(`Configurando skill "${aiResult.skillData.type}"...`);
         const { setupMcpSkill } = await import('./skill.js');
@@ -242,4 +195,100 @@ export async function runChatCommand(basePath: string): Promise<void> {
       p.log.error(t('chat_error_ai', (error as Error).message));
     }
   }
+}
+
+export async function runChatCommand(basePath: string): Promise<void> {
+  const initialized = await checkConfigExist(basePath);
+  if (!initialized) {
+    p.log.error(t('chat_error_init'));
+    return;
+  }
+
+  p.intro(t('chat_intro'));
+  await runChatSession(basePath);
+}
+
+async function handleSlashCommand(basePath: string, input: string): Promise<boolean> {
+  const parts = input.trim().split(' ');
+  const cmd = parts[0].toLowerCase();
+
+  switch (cmd) {
+    case '/help':
+      p.note(
+        `Comandos de Barra Disponíveis / Available Slash Commands:\n` +
+          `• /init    : Inicializar contexto e mapear arquitetura\n` +
+          `• /model   : Escolher provedor e modelo de IA\n` +
+          `• /mvp     : Criar especificação técnica de MVP\n` +
+          `• /task    : Planejar MVP em backlog de tarefas\n` +
+          `• /dev     : Modo Engenheiro (checklist de desenvolvimento)\n` +
+          `• /skill   : Configurar servidores MCP e automações\n` +
+          `• /bridge  : Configurar pontes para outros agentes (Cursor, Claude Code)\n` +
+          `• /help    : Exibir esta ajuda`,
+        'SophiaCode Commands'
+      );
+      return true;
+
+    case '/init': {
+      const { runInitFlow } = await import('../core/orchestrator.js');
+      await runInitFlow(basePath);
+      return true;
+    }
+
+    case '/model': {
+      await changeModelFlow(basePath);
+      return true;
+    }
+
+    case '/mvp': {
+      const { runMvpCommand } = await import('./mvp.js');
+      await runMvpCommand(basePath);
+      return true;
+    }
+
+    case '/task': {
+      const { runTaskCommand } = await import('./task.js');
+      await runTaskCommand(basePath);
+      return true;
+    }
+
+    case '/dev': {
+      const { runDevCommand } = await import('./dev.js');
+      await runDevCommand(basePath);
+      return true;
+    }
+
+    case '/skill': {
+      const { runSkillCommand } = await import('./skill.js');
+      await runSkillCommand(basePath);
+      return true;
+    }
+
+    case '/bridge': {
+      const { runBridgeCommand } = await import('./bridge.js');
+      await runBridgeCommand(basePath);
+      return true;
+    }
+
+    default:
+      p.log.warn(`Comando desconhecido: ${cmd}. Digite /help para ajuda.`);
+      return true;
+  }
+}
+
+async function changeModelFlow(basePath: string): Promise<void> {
+  const { askSetupConfig } = await import('./prompts.js');
+  let existing: any = undefined;
+  try {
+    existing = await readProjectConfig(basePath);
+  } catch {}
+
+  const setupConfig = await askSetupConfig(existing);
+  const updatedConfig = {
+    ...existing,
+    provider: setupConfig.provider,
+    modelName: setupConfig.modelName,
+  };
+
+  await saveProjectConfig(basePath, updatedConfig);
+  p.log.success(`Modelo atualizado com sucesso para: ${setupConfig.provider} (${setupConfig.modelName})`);
 }

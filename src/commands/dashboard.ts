@@ -11,48 +11,72 @@ export async function runInteractiveDashboard(basePath: string): Promise<void> {
   await ensureLanguageResolved();
 
   p.intro(t('dashboard_title'));
+  p.log.info('Pressione [TAB] para alternar entre o Chat e os Menus de Comandos.');
+
+  let currentMode: 'chat' | 'menu' = 'chat';
+  let chatBuffer = '';
 
   while (true) {
-    const choice = await p.select({
-      message: t('dashboard_select_prompt'),
-      options: [
-        { value: 'chat', label: t('dashboard_menu_chat') },
-        { value: 'init', label: t('dashboard_menu_init') },
-        { value: 'mvp', label: t('dashboard_menu_mvp') },
-        { value: 'task', label: t('dashboard_menu_task') },
-        { value: 'dev', label: t('dashboard_menu_dev') },
-        { value: 'skill', label: t('dashboard_menu_skill') },
-        { value: 'bridge', label: t('dashboard_menu_bridge') },
-        { value: 'exit', label: t('dashboard_menu_exit') },
-      ],
-    });
+    if (currentMode === 'chat') {
+      const { runChatSession } = await import('./chat.js');
+      const result = await runChatSession(basePath, chatBuffer);
 
-    if (p.isCancel(choice) || choice === 'exit') {
-      p.outro(t('dashboard_outro'));
-      break;
-    }
-
-    try {
-      if (choice === 'init') {
-        await runInitFlow(basePath);
-      } else if (choice === 'mvp') {
-        await runMvpCommand(basePath);
-      } else if (choice === 'task') {
-        await runTaskCommand(basePath);
-      } else if (choice === 'dev') {
-        await runDevCommand(basePath);
-      } else if (choice === 'skill') {
-        await runSkillCommand(basePath);
-      } else if (choice === 'bridge') {
-        await runBridgeCommand(basePath);
-      } else if (choice === 'chat') {
-        const { runChatCommand } = await import('./chat.js');
-        await runChatCommand(basePath);
+      if (result.toggleMode) {
+        currentMode = 'menu';
+        chatBuffer = result.text; // Preserve typed text
+        console.log('\n🔄 [TAB] Alternado para Modo Menu / Switched to Menu Mode');
+        continue;
       }
-    } catch (error) {
-      p.log.error((error as Error).message);
-    }
 
-    p.log.info('---'); // Visual command separator
+      if (result.canceled) {
+        p.outro(t('dashboard_outro'));
+        break;
+      }
+    } else {
+      const choice = await p.select({
+        message: t('dashboard_select_prompt'),
+        options: [
+          { value: 'chat', label: '💬 ' + t('dashboard_menu_chat') + ' (TAB)' },
+          { value: 'init', label: t('dashboard_menu_init') },
+          { value: 'mvp', label: t('dashboard_menu_mvp') },
+          { value: 'task', label: t('dashboard_menu_task') },
+          { value: 'dev', label: t('dashboard_menu_dev') },
+          { value: 'skill', label: t('dashboard_menu_skill') },
+          { value: 'bridge', label: t('dashboard_menu_bridge') },
+          { value: 'exit', label: t('dashboard_menu_exit') },
+        ],
+      });
+
+      if (p.isCancel(choice) || choice === 'exit') {
+        p.outro(t('dashboard_outro'));
+        break;
+      }
+
+      if (choice === 'chat') {
+        currentMode = 'chat';
+        console.log('\n🔄 Alternado para Modo Chat / Switched to Chat Mode');
+        continue;
+      }
+
+      try {
+        if (choice === 'init') {
+          await runInitFlow(basePath);
+        } else if (choice === 'mvp') {
+          await runMvpCommand(basePath);
+        } else if (choice === 'task') {
+          await runTaskCommand(basePath);
+        } else if (choice === 'dev') {
+          await runDevCommand(basePath);
+        } else if (choice === 'skill') {
+          await runSkillCommand(basePath);
+        } else if (choice === 'bridge') {
+          await runBridgeCommand(basePath);
+        }
+      } catch (error) {
+        p.log.error((error as Error).message);
+      }
+
+      p.log.info('---'); // Visual command separator
+    }
   }
 }
