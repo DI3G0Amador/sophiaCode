@@ -399,12 +399,47 @@ export async function transitionJiraIssueByName(
     if (!res.ok) return false;
     const data = (await res.json()) as any;
 
-    // 2. Find transition matching the targetStatusName (case insensitive)
-    const transition = data.transitions.find(
-      (t: any) =>
-        t.name.toLowerCase().includes(targetStatusName.toLowerCase()) ||
-        t.to.name.toLowerCase().includes(targetStatusName.toLowerCase())
-    );
+    // Normalize target status mapping to common synonyms
+    const target = targetStatusName.toLowerCase();
+    let keywords: string[] = [];
+
+    if (target === 'done' || target === 'concluído' || target === 'pronto') {
+      keywords = [
+        'done',
+        'concluído',
+        'concluido',
+        'pronto',
+        'resolved',
+        'resolvido',
+        'finalizado',
+        'fechado',
+        'close',
+        'complete',
+        'terminado',
+      ];
+    } else if (target === 'progress' || target === 'andamento' || target === 'desenvolvimento') {
+      keywords = [
+        'progress',
+        'andamento',
+        'desenvolvimento',
+        'dev',
+        'executando',
+        'start',
+        'iniciar',
+        'iniciada',
+        'work',
+        'trabalho',
+      ];
+    } else {
+      keywords = [target];
+    }
+
+    // 2. Find transition matching any of the synonyms
+    const transition = data.transitions.find((t: any) => {
+      const name = t.name.toLowerCase();
+      const toName = t.to?.name?.toLowerCase() || '';
+      return keywords.some((keyword) => name.includes(keyword) || toName.includes(keyword));
+    });
 
     if (transition) {
       // 3. Post transition
