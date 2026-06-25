@@ -110,5 +110,36 @@ export function setupCommands(): Command {
       }
     });
 
+  // Command: jira-mcp
+  program
+    .command('jira-mcp')
+    .description('Start the built-in Jira MCP Server')
+    .action(async () => {
+      try {
+        const basePath = process.cwd();
+        const { startJiraMcpServer } = await import('../core/mcp/jiraServer.js');
+        startJiraMcpServer(basePath);
+      } catch (error) {
+        console.error('An unexpected error occurred during Jira MCP server startup:', error);
+        process.exit(1);
+      }
+    });
+
+  // Command: chat
+  program
+    .command('chat')
+    .description('Start natural language chat interface to interact with SophiaCode')
+    .action(async () => {
+      try {
+        const basePath = process.cwd();
+        await ensureLanguageResolved();
+        const { runChatCommand } = await import('./chat.js');
+        await runChatCommand(basePath);
+      } catch (error) {
+        console.error('An unexpected error occurred during chat initialization:', error);
+        process.exit(1);
+      }
+    });
+
   return program;
 }

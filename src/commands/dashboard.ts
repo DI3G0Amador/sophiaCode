@@ -16,6 +16,7 @@ export async function runInteractiveDashboard(basePath: string): Promise<void> {
     const choice = await p.select({
       message: t('dashboard_select_prompt'),
       options: [
+        { value: 'chat', label: t('dashboard_menu_chat') },
         { value: 'init', label: t('dashboard_menu_init') },
         { value: 'mvp', label: t('dashboard_menu_mvp') },
         { value: 'task', label: t('dashboard_menu_task') },
@@ -44,6 +45,9 @@ export async function runInteractiveDashboard(basePath: string): Promise<void> {
         await runSkillCommand(basePath);
       } else if (choice === 'bridge') {
         await runBridgeCommand(basePath);
+      } else if (choice === 'chat') {
+        const { runChatCommand } = await import('./chat.js');
+        await runChatCommand(basePath);
       }
     } catch (error) {
       p.log.error((error as Error).message);

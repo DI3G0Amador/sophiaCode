@@ -127,8 +127,14 @@ export type TranslationKeys =
   | 'dashboard_menu_dev'
   | 'dashboard_menu_skill'
   | 'dashboard_menu_bridge'
+  | 'dashboard_menu_chat'
   | 'dashboard_menu_exit'
   | 'dashboard_outro'
+  | 'chat_intro'
+  | 'chat_message_prompt'
+  | 'chat_error_init'
+  | 'chat_ai_thinking'
+  | 'chat_error_ai'
   | 'cancel_generic';
 
 export const TRANSLATIONS: Record<
@@ -272,8 +278,14 @@ export const TRANSLATIONS: Record<
     dashboard_menu_dev: 'Engineer Mode - Monitor and progress checklist (dev)',
     dashboard_menu_skill: 'Configure MCP templates and automation scripts (skill)',
     dashboard_menu_bridge: 'Configure external AI developer tool bridges (bridge)',
+    dashboard_menu_chat: 'Chat with SophiaCode Assistant (chat)',
     dashboard_menu_exit: 'Exit',
     dashboard_outro: 'Exiting SophiaCode. Goodbye!',
+    chat_intro: '=== Chat Mode (SophiaCode AI Assistant) ===',
+    chat_message_prompt: 'Chat (type "menu" to go back, "exit" to quit)',
+    chat_error_init: 'Error: SophiaCode is not initialized in this repository. Run "sophiacode init" first.',
+    chat_ai_thinking: 'AI is thinking...',
+    chat_error_ai: 'Error communicating with AI: {0}',
     cancel_generic: 'Operation cancelled.',
   },
   pt: {
@@ -421,9 +433,15 @@ export const TRANSLATIONS: Record<
     dashboard_menu_task: 'Planejar MVP em backlog de tarefas (task)',
     dashboard_menu_dev: 'Modo Engenheiro - Monitorar e progredir checklist (dev)',
     dashboard_menu_skill: 'Configurar MCP e scripts de automação (skill)',
-    dashboard_menu_bridge: 'Configurar pontes de integração de agentes de IA (bridge)',
+    dashboard_menu_bridge: 'Configurar pontes para ferramentas externas de IA (bridge)',
+    dashboard_menu_chat: 'Conversar com o Assistente de IA (chat)',
     dashboard_menu_exit: 'Sair',
-    dashboard_outro: 'Saindo do SophiaCode. Até mais!',
+    dashboard_outro: 'Saindo do SophiaCode. Até logo!',
+    chat_intro: '=== Modo Chat (Assistente de IA SophiaCode) ===',
+    chat_message_prompt: 'Chat (digite "menu" para voltar, "sair" para fechar)',
+    chat_error_init: 'Erro: O SophiaCode não está inicializado neste repositório. Rode "sophiacode init" primeiro.',
+    chat_ai_thinking: 'A IA está pensando...',
+    chat_error_ai: 'Erro ao se comunicar com a IA: {0}',
     cancel_generic: 'Operação cancelada.',
   },
 };

@@ -1,4 +1,6 @@
 import * as p from '@clack/prompts';
+import fs from 'fs/promises';
+import path from 'path';
 import { t } from '../core/i18n.js';
 import {
   checkConfigExist,
@@ -40,11 +42,22 @@ export async function runDevCommand(basePath: string): Promise<void> {
   // 4. Load checklist
   let subtasks: { id: string; title: string; done: boolean }[];
   try {
-    subtasks = await readTaskSubtasks(basePath, selectedTaskDir);
+    subtasks = await readTaskSubtasks(basePath, selectedTaskDir as string);
   } catch (error) {
     p.log.error(t('dev_read_subtasks_error', (error as Error).message));
     p.outro(t('dev_fail_generic'));
     return;
+  }
+
+  // Check if there is a linked Jira ticket
+  let jiraLink: any = undefined;
+  try {
+    const jiraPath = path.join(basePath, 'sophiAgents', 'tasks', selectedTaskDir as string, 'jira.json');
+    const jiraData = await fs.readFile(jiraPath, 'utf-8');
+    jiraLink = JSON.parse(jiraData);
+    p.log.info(`🔗 Tarefa vinculada ao Jira: ${jiraLink.issueKey}`);
+  } catch {
+    // No linked Jira ticket
   }
 
   if (subtasks.length === 0) {
@@ -73,8 +86,33 @@ export async function runDevCommand(basePath: string): Promise<void> {
   }));
 
   try {
-    await writeTaskSubtasks(basePath, selectedTaskDir, updatedSubtasks);
+    await writeTaskSubtasks(basePath, selectedTaskDir as string, updatedSubtasks);
     p.log.success(t('dev_save_success'));
+
+    // Handle Jira status transition syncing
+    if (jiraLink) {
+      const allDone = updatedSubtasks.every((s) => s.done);
+      const someDone = updatedSubtasks.some((s) => s.done);
+      const { transitionJiraIssueByName } = await import('../core/mcp/jiraServer.js');
+
+      if (allDone) {
+        p.log.step(`Sincronizando Jira: Finalizando issue ${jiraLink.issueKey}...`);
+        const ok = await transitionJiraIssueByName(basePath, jiraLink.issueKey, 'Done');
+        if (ok) {
+          p.log.success(`✅ Issue ${jiraLink.issueKey} marcada como concluída/Done no Jira.`);
+        } else {
+          p.log.warn(`⚠️ Não foi possível alterar status para Done no Jira.`);
+        }
+      } else if (someDone) {
+        p.log.step(`Sincronizando Jira: Iniciando/Mantendo issue ${jiraLink.issueKey} em andamento...`);
+        const ok = await transitionJiraIssueByName(basePath, jiraLink.issueKey, 'Progress');
+        if (ok) {
+          p.log.success(`✅ Issue ${jiraLink.issueKey} marcada como Em Andamento/In Progress no Jira.`);
+        } else {
+          p.log.warn(`⚠️ Não foi possível alterar status para In Progress no Jira.`);
+        }
+      }
+    }
   } catch (error) {
     p.log.error(t('dev_save_error', (error as Error).message));
     p.outro(t('dev_fail_generic'));

@@ -15,6 +15,57 @@ import { createAIService } from '../core/ai/providers.js';
 import { TASK_SYSTEM_PROMPT, buildTaskPrompt, TASK_SCHEMA } from '../core/ai/prompts.js';
 import { getApiKey } from '../core/fs/global-config.js';
 
+export async function planTasksForMvp(
+  basePath: string,
+  selectedMvpKey: string
+): Promise<{ tasks: any[] }> {
+  // Load input data
+  const mvpData = await readMvpConfig(basePath, selectedMvpKey);
+  const architectureMap = await readMapFile(basePath);
+
+  const patternsPath = path.join(basePath, 'sophiAgents', 'context', 'coding-patterns.md');
+  const codingPatterns = await fs.readFile(patternsPath, 'utf-8');
+
+  // Setup AI Service and call LLM
+  const config = await readProjectConfig(basePath);
+  const resolvedApiKey =
+    config.provider !== 'ollama' ? await getApiKey(config.provider) : undefined;
+
+  const aiService = createAIService({
+    provider: config.provider,
+    modelName: config.modelName,
+    temperature: config.temperature,
+    apiKey: resolvedApiKey,
+  });
+
+  const userPrompt = buildTaskPrompt(
+    JSON.stringify(mvpData, null, 2),
+    architectureMap,
+    codingPatterns
+  );
+
+  const taskResult = await aiService.generateStructured<{
+    tasks: {
+      index: string;
+      slug: string;
+      title: string;
+      planContent: string;
+      subtasks: { id: string; title: string; done: boolean }[];
+    }[];
+  }>(TASK_SYSTEM_PROMPT, userPrompt, TASK_SCHEMA);
+
+  // Persist tasks to disk
+  for (const task of taskResult.tasks) {
+    await saveTask(basePath, task.index, task.slug, task.planContent, task.subtasks);
+  }
+
+  // Update MVP status
+  mvpData.status = 'planned';
+  await saveMvpConfig(basePath, selectedMvpKey, mvpData);
+
+  return { tasks: taskResult.tasks };
+}
+
 export async function runTaskCommand(basePath: string): Promise<void> {
   // 1. Verify that context has been initialized first
   const initialized = await checkConfigExist(basePath);
@@ -44,80 +95,80 @@ export async function runTaskCommand(basePath: string): Promise<void> {
     return;
   }
 
-  // 3. Load input data
-  const plannerSpinner = p.spinner();
-  plannerSpinner.start(t('task_spinner_read'));
-
-  let mvpData: any;
-  let architectureMap: string;
-  let codingPatterns: string;
-
-  try {
-    mvpData = await readMvpConfig(basePath, selectedMvpKey);
-    architectureMap = await readMapFile(basePath);
-
-    const patternsPath = path.join(basePath, 'sophiAgents', 'context', 'coding-patterns.md');
-    codingPatterns = await fs.readFile(patternsPath, 'utf-8');
-    plannerSpinner.stop(t('task_read_success'));
-  } catch (error) {
-    plannerSpinner.stop(t('task_read_fail'));
-    p.log.error(t('discovery_error_prefix', (error as Error).message));
-    p.outro(t('task_fail_generic'));
-    return;
-  }
-
-  // 4. Setup AI Service and call LLM
   const aiSpinner = p.spinner();
   aiSpinner.start(t('task_spinner_ai'));
 
   try {
-    const config = await readProjectConfig(basePath);
-    const resolvedApiKey =
-      config.provider !== 'ollama' ? await getApiKey(config.provider) : undefined;
+    const { tasks } = await planTasksForMvp(basePath, selectedMvpKey as string);
+    aiSpinner.stop(t('task_success'));
 
-    const aiService = createAIService({
-      provider: config.provider,
-      modelName: config.modelName,
-      temperature: config.temperature,
-      apiKey: resolvedApiKey,
-    });
+    // Optional Jira integration export
+    const { isJiraConfigured, createJiraIssue } = await import('../core/mcp/jiraServer.js');
+    const jiraActive = await isJiraConfigured(basePath);
 
-    const userPrompt = buildTaskPrompt(
-      JSON.stringify(mvpData, null, 2),
-      architectureMap,
-      codingPatterns
-    );
+    if (jiraActive) {
+      const exportToJira = await p.confirm({
+        message: 'Deseja exportar essas tarefas para o Jira? / Export tasks to Jira?',
+        initialValue: true,
+      });
 
-    const taskResult = await aiService.generateStructured<{
-      tasks: {
-        index: string;
-        slug: string;
-        title: string;
-        planContent: string;
-        subtasks: { id: string; title: string; done: boolean }[];
-      }[];
-    }>(TASK_SYSTEM_PROMPT, userPrompt, TASK_SCHEMA);
+      if (exportToJira && !p.isCancel(exportToJira)) {
+        const jiraSpinner = p.spinner();
+        jiraSpinner.start('Exportando para o Jira... / Exporting to Jira...');
 
-    aiSpinner.stop(t('task_ai_success'));
+        let projectKey = 'PROJ';
+        try {
+          const projectConfig = await readProjectConfig(basePath);
+          if (projectConfig.jira && projectConfig.jira.projectKey) {
+            projectKey = projectConfig.jira.projectKey;
+          }
+        } catch {
+          // Ignore
+        }
 
-    // 5. Persist tasks to disk
-    const saveSpinner = p.spinner();
-    saveSpinner.start(t('task_spinner_save'));
+        for (const task of tasks) {
+          try {
+            const descriptionText = `Plan:\n${task.planContent}\n\nSubtasks:\n${task.subtasks.map((s: any) => `- [ ] ${s.title}`).join('\n')}`;
+            const jiraIssue = await createJiraIssue(
+              basePath,
+              projectKey,
+              `[Task ${task.index}] ${task.title}`,
+              descriptionText
+            );
 
-    for (const task of taskResult.tasks) {
-      await saveTask(basePath, task.index, task.slug, task.planContent, task.subtasks);
-      p.log.step(t('task_generated_step', task.index, task.slug));
+            // Save Jira link locally
+            const taskDir = path.join(
+              basePath,
+              'sophiAgents',
+              'tasks',
+              `task-${task.index}-${task.slug}`
+            );
+            await fs.writeFile(
+              path.join(taskDir, 'jira.json'),
+              JSON.stringify(
+                {
+                  issueKey: jiraIssue.key,
+                  id: jiraIssue.id,
+                  self: jiraIssue.self,
+                },
+                null,
+                2
+              )
+            );
+            p.log.step(`• Jira Issue: ${jiraIssue.key}`);
+          } catch (err) {
+            p.log.error(`Erro ao criar issue no Jira para tarefa ${task.index}: ${(err as Error).message}`);
+          }
+        }
+        jiraSpinner.stop('Exportação concluída! / Export completed!');
+      }
     }
 
-    // Update MVP status
-    mvpData.status = 'planned';
-    await saveMvpConfig(basePath, selectedMvpKey, mvpData);
-
-    saveSpinner.stop(t('task_success'));
-    p.outro(t('task_outro', mvpData.name, taskResult.tasks.length));
+    const mvpData = await readMvpConfig(basePath, selectedMvpKey as string);
+    p.outro(t('task_outro', mvpData.name, tasks.length));
   } catch (error) {
     aiSpinner.stop(t('task_ai_fail'));
-    p.log.error(t('discovery_error_prefix', (error as Error).message));
+    p.log.error(`Erro: ${(error as Error).message}`);
     p.outro(t('task_fail_generic'));
   }
 }

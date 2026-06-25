@@ -276,3 +276,90 @@ ${architectureMap}
 ${codingPatterns}
 `;
 }
+
+/**
+ * System prompt for SophiaCode Chat Assistant.
+ */
+export const CHAT_SYSTEM_PROMPT = `
+You are the SophiaCode AI Chat Assistant, an expert workspace architect and pair programmer.
+Your goal is to help the user interact with SophiaCode in a friendly natural-language interface and execute actions based on their requests.
+
+You must respond strictly in JSON matching the response schema.
+
+Actions you can trigger:
+1. CREATE_MVP: The user wants to specify or create an MVP/feature (e.g. "crie um mvp de chat", "cria o mvp tal"). You MUST fill the 'mvpData' field. Translate any user descriptions or titles to English if they are in Portuguese.
+2. PLAN_MVP_TASKS: The user wants to plan/break down an MVP into tasks (e.g. "use o mvp tal", "crie as tarefas de checkout", "planeje o mvp login"). You MUST specify the MVP key in 'planMvpKey'.
+3. CREATE_SKILL: The user wants to setup a skill (e.g. "crie uma skill de busca", "crie um script de automação"). You MUST fill 'skillData'.
+4. CHAT_RESPONSE: Default action for questions, chit-chat, explaining how things work, or asking for clarification before acting.
+
+Use the provided conversation history and list of existing MVPs/tasks to contextualize the user request (especially references to "o último prompt", "crie as tarefas dele", "use o mvp anterior").
+
+Respond in the language of the user (e.g., Portuguese). Keep explanations friendly and brief.
+`;
+
+/**
+ * JSON Schema for Chat response.
+ */
+export const CHAT_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    action: {
+      type: 'STRING',
+      description: 'One of CREATE_MVP, PLAN_MVP_TASKS, CREATE_SKILL, CHAT_RESPONSE',
+    },
+    message: {
+      type: 'STRING',
+      description: "The assistant message to print to the user (written in user's language, markdown allowed)",
+    },
+    mvpData: {
+      type: 'OBJECT',
+      properties: {
+        name: { type: 'STRING', description: 'Descriptive name of the MVP' },
+        key: { type: 'STRING', description: 'Unique slug containing lowercase letters, numbers, and hyphens' },
+        description: { type: 'STRING', description: 'Main objective of this MVP' },
+        features: {
+          type: 'ARRAY',
+          items: { type: 'STRING' },
+          description: 'Key features list',
+        },
+        requirements: { type: 'STRING', description: 'Technical requirements or constraints (in English)' },
+        status: { type: 'STRING', description: 'Initial status (e.g., draft)' },
+      },
+      required: ['name', 'key', 'description', 'features', 'requirements', 'status'],
+    },
+    planMvpKey: {
+      type: 'STRING',
+      description: 'Key of the MVP to plan',
+    },
+    skillData: {
+      type: 'OBJECT',
+      properties: {
+        type: { type: 'STRING', description: 'sqlite, filesystem, brave-search, or custom-script' },
+        scriptContent: { type: 'STRING', description: 'Script content for custom-script' },
+      },
+      required: ['type'],
+    },
+  },
+  required: ['action', 'message'],
+};
+
+/**
+ * Builds user prompt for Chat Mode.
+ */
+export function buildChatPrompt(
+  conversationHistory: string,
+  existingMvpKeys: string[],
+  existingTasks: string[]
+): string {
+  return `
+Here are the existing resources in the project context:
+- Existing MVPs keys: [${existingMvpKeys.map((k) => `"${k}"`).join(', ')}]
+- Existing Tasks: [${existingTasks.map((t) => `"${t}"`).join(', ')}]
+
+=== CONVERSATION HISTORY ===
+${conversationHistory}
+
+Determine the action and write a JSON response:
+`;
+}
+
