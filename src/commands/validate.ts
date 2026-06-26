@@ -63,6 +63,7 @@ export async function runValidateCommand(basePath: string): Promise<void> {
     addJiraWorklog,
     transitionJiraIssueByName,
     isJiraConfigured,
+    getJiraSubtasks,
   } = await import('../core/mcp/jiraServer.js');
 
   const jiraActive = await isJiraConfigured(basePath);
@@ -101,7 +102,24 @@ export async function runValidateCommand(basePath: string): Promise<void> {
         worklogSpinner.stop(t('validate_worklog_success', timeSpent));
       }
 
-      // 5.3 Transition to Done
+      // 5.3 Close child subtasks first
+      try {
+        const subtasksList = await getJiraSubtasks(basePath, jiraLink.issueKey);
+        if (subtasksList.length > 0) {
+          const subtasksSpinner = p.spinner();
+          subtasksSpinner.start(
+            `Fechando ${subtasksList.length} subtarefas no Jira... / Closing subtasks...`
+          );
+          for (const sub of subtasksList) {
+            await transitionJiraIssueByName(basePath, sub.key, 'Done');
+          }
+          subtasksSpinner.stop(`${subtasksList.length} subtarefas fechadas no Jira.`);
+        }
+      } catch (subErr) {
+        p.log.warn(`Aviso ao fechar subtarefas no Jira: ${(subErr as Error).message}`);
+      }
+
+      // 5.4 Transition parent to Done
       const transitionSpinner = p.spinner();
       transitionSpinner.start(t('validate_closing_issue'));
       const ok = await transitionJiraIssueByName(basePath, jiraLink.issueKey, 'Done');

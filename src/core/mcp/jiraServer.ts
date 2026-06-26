@@ -648,3 +648,36 @@ export async function addJiraWorklog(
     throw new Error(`Jira API error adding worklog (${response.status}): ${errorText}`);
   }
 }
+
+/**
+ * Fetches all child subtasks of a parent Jira issue.
+ */
+export async function getJiraSubtasks(
+  basePath: string,
+  parentKey: string
+): Promise<{ key: string; id: string }[]> {
+  const credentials = await loadJiraCredentials(basePath);
+  const auth = Buffer.from(`${credentials.email}:${credentials.token}`).toString('base64');
+  const jql = `parent = "${parentKey}"`;
+  const response = await fetch(
+    `${credentials.url}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Basic ${auth}`,
+        Accept: 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Jira API error fetching subtasks (${response.status}): ${errorText}`);
+  }
+
+  const result = await response.json();
+  return (result.issues || []).map((issue: any) => ({
+    key: issue.key,
+    id: issue.id,
+  }));
+}

@@ -210,6 +210,25 @@ export async function runTaskCommand(basePath: string): Promise<void> {
               )
             );
             p.log.step(`• Jira Issue: ${jiraIssue.key}`);
+
+            // Create child subtasks on Jira
+            for (const sub of task.subtasks) {
+              try {
+                await createJiraIssue(
+                  basePath,
+                  projectKey,
+                  sub.title,
+                  `Subtask linked to parent: ${jiraIssue.key}`,
+                  'Sub-task',
+                  jiraIssue.key,
+                  assigneeId
+                );
+              } catch (subErr) {
+                p.log.error(
+                  `Erro ao criar subtarefa "${sub.title}" no Jira: ${(subErr as Error).message}`
+                );
+              }
+            }
           } catch (err) {
             p.log.error(
               `Erro ao criar issue no Jira para tarefa ${task.index}: ${(err as Error).message}`

@@ -186,6 +186,25 @@ export async function runChatSession(
                   JSON.stringify({ issueKey: issue.key, id: issue.id, self: issue.self }, null, 2)
                 );
                 p.log.step(`• Jira Issue: ${issue.key}`);
+
+                // Create child subtasks on Jira
+                for (const sub of task.subtasks) {
+                  try {
+                    await createJiraIssue(
+                      basePath,
+                      projectKey,
+                      sub.title,
+                      `Subtask linked to parent: ${issue.key}`,
+                      'Sub-task',
+                      issue.key,
+                      assigneeId
+                    );
+                  } catch (subErr) {
+                    p.log.error(
+                      `Erro ao criar subtarefa "${sub.title}" no Jira: ${(subErr as Error).message}`
+                    );
+                  }
+                }
               } catch (err) {
                 p.log.error(`Erro ao criar issue no Jira: ${(err as Error).message}`);
               }

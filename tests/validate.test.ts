@@ -42,6 +42,7 @@ vi.mock('../src/core/mcp/jiraServer.js', () => {
     assignJiraIssue: vi.fn().mockResolvedValue(undefined),
     addJiraWorklog: vi.fn().mockResolvedValue(undefined),
     transitionJiraIssueByName: vi.fn().mockResolvedValue(true),
+    getJiraSubtasks: vi.fn().mockResolvedValue([{ key: 'TEST-124', id: '10002' }]),
   };
 });
 
