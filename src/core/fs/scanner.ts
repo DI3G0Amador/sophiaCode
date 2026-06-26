@@ -1,7 +1,38 @@
 import glob from 'fast-glob';
+import fs from 'fs/promises';
+import path from 'path';
 
 interface TreeNode {
   [key: string]: TreeNode | null;
+}
+
+/**
+ * Parses .gitignore file and converts typical patterns to glob format.
+ */
+async function getGitignorePatterns(basePath: string): Promise<string[]> {
+  try {
+    const gitignorePath = path.join(basePath, '.gitignore');
+    const content = await fs.readFile(gitignorePath, 'utf-8');
+    return content
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#'))
+      .map((pattern) => {
+        let globPattern = pattern;
+        if (globPattern.startsWith('/')) {
+          globPattern = globPattern.slice(1);
+        }
+        if (globPattern.endsWith('/')) {
+          globPattern += '**';
+        } else if (!globPattern.includes('*')) {
+          return [globPattern, `${globPattern}/**`];
+        }
+        return [globPattern];
+      })
+      .flat();
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -9,20 +40,24 @@ interface TreeNode {
  * ignoring heavy and system-related directories.
  */
 export async function scanDirectory(basePath: string): Promise<string[]> {
+  const gitignorePatterns = await getGitignorePatterns(basePath);
+  const baseIgnore = [
+    'node_modules/**',
+    '.git/**',
+    'dist/**',
+    '.next/**',
+    'build/**',
+    '.env',
+    'package-lock.json',
+    'yarn.lock',
+    'pnpm-lock.yaml',
+    'sophiAgents/**',
+  ];
+  const mergedIgnore = Array.from(new Set([...baseIgnore, ...gitignorePatterns]));
+
   return await glob('**/*', {
     cwd: basePath,
-    ignore: [
-      'node_modules/**',
-      '.git/**',
-      'dist/**',
-      '.next/**',
-      'build/**',
-      '.env',
-      'package-lock.json',
-      'yarn.lock',
-      'pnpm-lock.yaml',
-      'sophiAgents/**',
-    ],
+    ignore: mergedIgnore,
     onlyFiles: true,
     dot: true,
   });

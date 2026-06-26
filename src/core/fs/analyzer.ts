@@ -140,7 +140,19 @@ export async function analyzeWorkspaceLocally(
       f.endsWith('.md')
   );
 
-  for (const file of codeFiles) {
+  // Prioritize source folders to analyze the most important code first, then cap at 150
+  const prioritisedFolders = ['src/', 'app/', 'lib/', 'core/', 'server/'];
+  const sortedCodeFiles = [...codeFiles].sort((a, b) => {
+    const aIsPrioritized = prioritisedFolders.some((folder) => a.startsWith(folder));
+    const bIsPrioritized = prioritisedFolders.some((folder) => b.startsWith(folder));
+    if (aIsPrioritized && !bIsPrioritized) return -1;
+    if (!aIsPrioritized && bIsPrioritized) return 1;
+    return a.localeCompare(b);
+  });
+
+  const limitedCodeFiles = sortedCodeFiles.slice(0, 150);
+
+  for (const file of limitedCodeFiles) {
     try {
       const analysis = await analyzeFile(basePath, file);
       files.push(analysis);
