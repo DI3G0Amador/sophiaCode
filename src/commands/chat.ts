@@ -246,6 +246,7 @@ async function handleSlashCommand(basePath: string, input: string): Promise<bool
         `Comandos de Barra Disponíveis / Available Slash Commands:\n` +
           `• /init    : Inicializar contexto e mapear arquitetura\n` +
           `• /model   : Escolher provedor e modelo de IA\n` +
+          `• /jira    : Configurar integração com o Jira\n` +
           `• /mvp     : Criar especificação técnica de MVP\n` +
           `• /task    : Planejar MVP em backlog de tarefas\n` +
           `• /dev     : Modo Engenheiro (checklist de desenvolvimento)\n` +
@@ -265,6 +266,12 @@ async function handleSlashCommand(basePath: string, input: string): Promise<bool
 
     case '/model': {
       await changeModelFlow(basePath);
+      return true;
+    }
+
+    case '/jira': {
+      const { runJiraConfigFlow } = await import('./jira.js');
+      await runJiraConfigFlow(basePath);
       return true;
     }
 

@@ -6,6 +6,7 @@ import { runDevCommand } from './dev.js';
 import { runSkillCommand } from './skill.js';
 import { runBridgeCommand } from './bridge.js';
 import { runValidateCommand } from './validate.js';
+import { runJiraConfigFlow } from './jira.js';
 import { ensureLanguageResolved } from '../core/i18n.js';
 
 /**
@@ -137,6 +138,21 @@ export function setupCommands(): Command {
         await runValidateCommand(basePath);
       } catch (error) {
         console.error('An unexpected error occurred during task validation:', error);
+        process.exit(1);
+      }
+    });
+
+  // Command: jira
+  program
+    .command('jira')
+    .description('Configure Jira Cloud integration settings interactively')
+    .action(async () => {
+      try {
+        const basePath = process.cwd();
+        await ensureLanguageResolved();
+        await runJiraConfigFlow(basePath);
+      } catch (error) {
+        console.error('An unexpected error occurred during Jira configuration:', error);
         process.exit(1);
       }
     });

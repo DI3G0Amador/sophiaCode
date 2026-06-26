@@ -152,7 +152,19 @@ export type TranslationKeys =
   | 'validate_jira_error'
   | 'validate_local_success'
   | 'validate_local_error'
-  | 'validate_outro';
+  | 'validate_outro'
+  | 'dashboard_menu_jira'
+  | 'jira_intro'
+  | 'jira_url_prompt'
+  | 'jira_url_required'
+  | 'jira_email_prompt'
+  | 'jira_email_required'
+  | 'jira_token_prompt'
+  | 'jira_token_required'
+  | 'jira_project_prompt'
+  | 'jira_project_required'
+  | 'jira_save_scope_prompt'
+  | 'jira_success';
 
 export const TRANSLATIONS: Record<
   'en' | 'pt',
@@ -324,6 +336,18 @@ export const TRANSLATIONS: Record<
     validate_local_success: 'Local checklist marked as completed.',
     validate_local_error: (msg: string) => `Error updating local checklist: ${msg}`,
     validate_outro: 'Task validated and closed successfully!',
+    dashboard_menu_jira: 'Configure Jira integration settings (jira)',
+    jira_intro: 'Jira Integration Setup',
+    jira_url_prompt: 'Jira Cloud URL (e.g. https://your-domain.atlassian.net):',
+    jira_url_required: 'Jira URL is required.',
+    jira_email_prompt: 'Jira Account Email Address:',
+    jira_email_required: 'Jira email is required.',
+    jira_token_prompt: 'Jira API Integration Token:',
+    jira_token_required: 'API token is required.',
+    jira_project_prompt: 'Default Jira Project Key (e.g. SCRUM):',
+    jira_project_required: 'Project key is required.',
+    jira_save_scope_prompt: 'Where do you want to save these Jira credentials?',
+    jira_success: 'Jira configuration updated successfully!',
   },
   pt: {
     welcome_intro: 'Bem-vindo à configuração do SophiaCode!',
@@ -500,6 +524,18 @@ export const TRANSLATIONS: Record<
     validate_local_success: 'Checklist local marcado como concluído.',
     validate_local_error: (msg: string) => `Erro ao atualizar checklist local: ${msg}`,
     validate_outro: 'Tarefa validada e fechada com sucesso!',
+    dashboard_menu_jira: 'Configurar integração com o Jira (jira)',
+    jira_intro: 'Configuração da Integração com o Jira',
+    jira_url_prompt: 'URL do Jira Cloud (Ex: https://dominio.atlassian.net):',
+    jira_url_required: 'A URL do Jira é obrigatória.',
+    jira_email_prompt: 'E-mail cadastrado no Jira:',
+    jira_email_required: 'O e-mail do Jira é obrigatório.',
+    jira_token_prompt: 'Token de API do Jira (senha de integração):',
+    jira_token_required: 'O token de API do Jira é obrigatório.',
+    jira_project_prompt: 'Chave padrão do projeto Jira (Ex: SCRUM):',
+    jira_project_required: 'A chave do projeto é obrigatória.',
+    jira_save_scope_prompt: 'Onde deseja salvar as credenciais do Jira?',
+    jira_success: 'Configuração do Jira atualizada com sucesso!',
   },
 };
 
