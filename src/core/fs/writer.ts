@@ -214,7 +214,13 @@ export async function saveTask(
   taskIndex: string,
   taskSlug: string,
   planContent: string,
-  subtasks: any[]
+  subtasks: any[],
+  metadata?: {
+    title: string;
+    estimatedTime?: string;
+    difficulty?: string;
+    owner?: string;
+  }
 ): Promise<void> {
   const taskDir = path.join(getConfigDirectory(basePath), 'tasks', `task-${taskIndex}-${taskSlug}`);
   await fs.mkdir(taskDir, { recursive: true });
@@ -224,6 +230,9 @@ export async function saveTask(
     JSON.stringify(subtasks, null, 2),
     'utf-8'
   );
+  if (metadata) {
+    await fs.writeFile(path.join(taskDir, 'task.json'), JSON.stringify(metadata, null, 2), 'utf-8');
+  }
 }
 
 /**

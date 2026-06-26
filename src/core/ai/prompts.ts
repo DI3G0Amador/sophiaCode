@@ -219,6 +219,11 @@ export const TASK_SCHEMA = {
           index: { type: 'STRING', description: 'Sequence number like 01, 02' },
           slug: { type: 'STRING', description: 'URL-friendly slug like setup-webhooks' },
           title: { type: 'STRING', description: 'Short task description' },
+          estimatedTime: {
+            type: 'STRING',
+            description: 'Estimated implementation time (e.g. 4h, 2d, 1d 4h)',
+          },
+          difficulty: { type: 'STRING', description: 'Difficulty level (e.g. Easy, Medium, Hard)' },
           planContent: { type: 'STRING', description: 'Complete detailed markdown plan' },
           subtasks: {
             type: 'ARRAY',
@@ -233,7 +238,15 @@ export const TASK_SCHEMA = {
             },
           },
         },
-        required: ['index', 'slug', 'title', 'planContent', 'subtasks'],
+        required: [
+          'index',
+          'slug',
+          'title',
+          'estimatedTime',
+          'difficulty',
+          'planContent',
+          'subtasks',
+        ],
       },
     },
   },
@@ -249,8 +262,10 @@ Each task must contain:
 1. An index (e.g. "01")
 2. A slug (e.g. "setup-db")
 3. A title
-4. A highly detailed step-by-step markdown plan (planContent) in English.
-5. A list of concrete mechanical subtasks (checklist items) to be completed.
+4. An estimated implementation time (estimatedTime, e.g. "4h", "2d", "1d 4h")
+5. A difficulty level (difficulty, e.g. "Easy", "Medium", "Hard")
+6. A highly detailed step-by-step markdown plan (planContent) in English.
+7. A list of concrete mechanical subtasks (checklist items) to be completed.
 
 Ensure the tasks are in order of dependencies (e.g. database schema/libraries setup first, logic coding second, tests/polishing third).
 `;

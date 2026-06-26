@@ -18,13 +18,39 @@ import { getApiKey } from '../core/fs/global-config.js';
 export async function planTasksForMvp(
   basePath: string,
   selectedMvpKey: string
-): Promise<{ tasks: any[] }> {
+): Promise<{ tasks: any[]; ownerName: string; assigneeId?: string }> {
   // Load input data
   const mvpData = await readMvpConfig(basePath, selectedMvpKey);
   const architectureMap = await readMapFile(basePath);
 
   const patternsPath = path.join(basePath, 'sophiAgents', 'context', 'coding-patterns.md');
   const codingPatterns = await fs.readFile(patternsPath, 'utf-8');
+
+  // Resolve Owner Name and Assignee ID
+  let ownerName = 'Developer';
+  let assigneeId: string | undefined = undefined;
+  try {
+    const { getJiraMyself, isJiraConfigured } = await import('../core/mcp/jiraServer.js');
+    if (await isJiraConfigured(basePath)) {
+      const myself = await getJiraMyself(basePath);
+      ownerName = myself.displayName;
+      assigneeId = myself.accountId;
+    }
+  } catch {
+    // Ignore
+  }
+
+  if (ownerName === 'Developer') {
+    try {
+      const { execSync } = await import('child_process');
+      const gitUser = execSync('git config user.name', { encoding: 'utf8' }).trim();
+      if (gitUser) {
+        ownerName = gitUser;
+      }
+    } catch {
+      // Ignore
+    }
+  }
 
   // Setup AI Service and call LLM
   const config = await readProjectConfig(basePath);
@@ -49,6 +75,8 @@ export async function planTasksForMvp(
       index: string;
       slug: string;
       title: string;
+      estimatedTime: string;
+      difficulty: string;
       planContent: string;
       subtasks: { id: string; title: string; done: boolean }[];
     }[];
@@ -56,14 +84,27 @@ export async function planTasksForMvp(
 
   // Persist tasks to disk
   for (const task of taskResult.tasks) {
-    await saveTask(basePath, task.index, task.slug, task.planContent, task.subtasks);
+    const planWithHeader =
+      `# [Task ${task.index}] ${task.title}\n` +
+      `- **Estimated Time / Estimativa**: ${task.estimatedTime}\n` +
+      `- **Difficulty / Dificuldade**: ${task.difficulty}\n` +
+      `- **Owner / Responsável**: ${ownerName}\n\n` +
+      `---\n\n` +
+      task.planContent;
+
+    await saveTask(basePath, task.index, task.slug, planWithHeader, task.subtasks, {
+      title: task.title,
+      estimatedTime: task.estimatedTime,
+      difficulty: task.difficulty,
+      owner: ownerName,
+    });
   }
 
   // Update MVP status
   mvpData.status = 'planned';
   await saveMvpConfig(basePath, selectedMvpKey, mvpData);
 
-  return { tasks: taskResult.tasks };
+  return { tasks: taskResult.tasks, ownerName, assigneeId };
 }
 
 export async function runTaskCommand(basePath: string): Promise<void> {
@@ -99,7 +140,10 @@ export async function runTaskCommand(basePath: string): Promise<void> {
   aiSpinner.start(t('task_spinner_ai'));
 
   try {
-    const { tasks } = await planTasksForMvp(basePath, selectedMvpKey as string);
+    const { tasks, ownerName, assigneeId } = await planTasksForMvp(
+      basePath,
+      selectedMvpKey as string
+    );
     aiSpinner.stop(t('task_success'));
 
     // Optional Jira integration export
@@ -128,12 +172,22 @@ export async function runTaskCommand(basePath: string): Promise<void> {
 
         for (const task of tasks) {
           try {
-            const descriptionText = `Plan:\n${task.planContent}\n\nSubtasks:\n${task.subtasks.map((s: any) => `- [ ] ${s.title}`).join('\n')}`;
+            const descriptionText =
+              `* **Estimativa de Tempo / Estimated Time**: ${task.estimatedTime}\n` +
+              `* **Dificuldade / Difficulty**: ${task.difficulty}\n` +
+              `* **Proprietário / Owner**: ${ownerName}\n\n` +
+              `---\n\n` +
+              `Plan:\n${task.planContent}\n\n` +
+              `Subtasks:\n${task.subtasks.map((s: any) => `- [ ] ${s.title}`).join('\n')}`;
+
             const jiraIssue = await createJiraIssue(
               basePath,
               projectKey,
               `[Task ${task.index}] ${task.title}`,
-              descriptionText
+              descriptionText,
+              'Task',
+              undefined,
+              assigneeId
             );
 
             // Save Jira link locally

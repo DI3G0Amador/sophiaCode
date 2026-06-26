@@ -365,7 +365,8 @@ export async function createJiraIssue(
   summary: string,
   description: string,
   issueType = 'Task',
-  parentKey?: string
+  parentKey?: string,
+  assigneeId?: string
 ): Promise<{ key: string; self: string; id: string }> {
   const credentials = await loadJiraCredentials(basePath);
   const auth = Buffer.from(`${credentials.email}:${credentials.token}`).toString('base64');
@@ -380,6 +381,9 @@ export async function createJiraIssue(
   };
   if (parentKey) {
     body.fields.parent = { key: parentKey };
+  }
+  if (assigneeId) {
+    body.fields.assignee = { accountId: assigneeId };
   }
   const response = await fetch(`${credentials.url}/rest/api/2/issue`, {
     method: 'POST',

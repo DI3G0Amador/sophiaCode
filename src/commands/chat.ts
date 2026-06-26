@@ -135,7 +135,10 @@ export async function runChatSession(
         const taskSpinner = p.spinner();
         taskSpinner.start(`Planejando tarefas para o MVP "${aiResult.planMvpKey}"...`);
         const { planTasksForMvp } = await import('./task.js');
-        const { tasks } = await planTasksForMvp(basePath, aiResult.planMvpKey);
+        const { tasks, ownerName, assigneeId } = await planTasksForMvp(
+          basePath,
+          aiResult.planMvpKey
+        );
         taskSpinner.stop(`Breakdown concluído. Geradas ${tasks.length} tarefas.`);
 
         const { isJiraConfigured, createJiraIssue } = await import('../core/mcp/jiraServer.js');
@@ -155,12 +158,22 @@ export async function runChatSession(
             } catch {}
             for (const task of tasks) {
               try {
-                const desc = `Plan:\n${task.planContent}\n\nSubtasks:\n${task.subtasks.map((s: any) => `- [ ] ${s.title}`).join('\n')}`;
+                const desc =
+                  `* **Estimativa de Tempo / Estimated Time**: ${task.estimatedTime}\n` +
+                  `* **Dificuldade / Difficulty**: ${task.difficulty}\n` +
+                  `* **Proprietário / Owner**: ${ownerName}\n\n` +
+                  `---\n\n` +
+                  `Plan:\n${task.planContent}\n\n` +
+                  `Subtasks:\n${task.subtasks.map((s: any) => `- [ ] ${s.title}`).join('\n')}`;
+
                 const issue = await createJiraIssue(
                   basePath,
                   projectKey,
                   `[Task ${task.index}] ${task.title}`,
-                  desc
+                  desc,
+                  'Task',
+                  undefined,
+                  assigneeId
                 );
                 const taskDir = path.join(
                   basePath,
