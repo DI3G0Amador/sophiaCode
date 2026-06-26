@@ -135,7 +135,24 @@ export type TranslationKeys =
   | 'chat_error_init'
   | 'chat_ai_thinking'
   | 'chat_error_ai'
-  | 'cancel_generic';
+  | 'cancel_generic'
+  | 'dashboard_menu_validate'
+  | 'validate_intro'
+  | 'validate_select_prompt'
+  | 'validate_assign_confirm'
+  | 'validate_assigning'
+  | 'validate_assign_success'
+  | 'validate_time_prompt'
+  | 'validate_time_required'
+  | 'validate_logging_worklog'
+  | 'validate_worklog_success'
+  | 'validate_closing_issue'
+  | 'validate_close_success'
+  | 'validate_close_fail'
+  | 'validate_jira_error'
+  | 'validate_local_success'
+  | 'validate_local_error'
+  | 'validate_outro';
 
 export const TRANSLATIONS: Record<
   'en' | 'pt',
@@ -283,10 +300,30 @@ export const TRANSLATIONS: Record<
     dashboard_outro: 'Exiting SophiaCode. Goodbye!',
     chat_intro: '=== Chat Mode (SophiaCode AI Assistant) ===',
     chat_message_prompt: 'Chat (type "menu" to go back, "exit" to quit)',
-    chat_error_init: 'Error: SophiaCode is not initialized in this repository. Run "sophiacode init" first.',
+    chat_error_init:
+      'Error: SophiaCode is not initialized in this repository. Run "sophiacode init" first.',
     chat_ai_thinking: 'AI is thinking...',
     chat_error_ai: 'Error communicating with AI: {0}',
     cancel_generic: 'Operation cancelled.',
+    dashboard_menu_validate: 'Validate and close a task (validate)',
+    validate_intro: 'Task Validation & Closure',
+    validate_select_prompt: 'Select which task you want to validate and close:',
+    validate_assign_confirm: (key: string, name: string) =>
+      `Do you want to assign task ${key} to yourself (${name})?`,
+    validate_assigning: 'Assigning task...',
+    validate_assign_success: (name: string) => `Task assigned successfully to ${name}.`,
+    validate_time_prompt: 'How long did the implementation take? (e.g. 1h, 45m, 2h 30m)',
+    validate_time_required: 'Time spent is required.',
+    validate_logging_worklog: 'Logging worklog on Jira...',
+    validate_worklog_success: (timeSpent: string) =>
+      `Worklog of ${timeSpent} registered successfully on Jira.`,
+    validate_closing_issue: 'Mapping transition and closing ticket on Jira...',
+    validate_close_success: (key: string) => `Ticket ${key} closed/completed on Jira.`,
+    validate_close_fail: 'Could not transition status to Done on Jira.',
+    validate_jira_error: (msg: string) => `Jira integration error: ${msg}`,
+    validate_local_success: 'Local checklist marked as completed.',
+    validate_local_error: (msg: string) => `Error updating local checklist: ${msg}`,
+    validate_outro: 'Task validated and closed successfully!',
   },
   pt: {
     welcome_intro: 'Bem-vindo à configuração do SophiaCode!',
@@ -439,10 +476,30 @@ export const TRANSLATIONS: Record<
     dashboard_outro: 'Saindo do SophiaCode. Até logo!',
     chat_intro: '=== Modo Chat (Assistente de IA SophiaCode) ===',
     chat_message_prompt: 'Chat (digite "menu" para voltar, "sair" para fechar)',
-    chat_error_init: 'Erro: O SophiaCode não está inicializado neste repositório. Rode "sophiacode init" primeiro.',
+    chat_error_init:
+      'Erro: O SophiaCode não está inicializado neste repositório. Rode "sophiacode init" primeiro.',
     chat_ai_thinking: 'A IA está pensando...',
     chat_error_ai: 'Erro ao se comunicar com a IA: {0}',
     cancel_generic: 'Operação cancelada.',
+    dashboard_menu_validate: 'Validar e fechar uma tarefa (validate)',
+    validate_intro: 'Validação e Fechamento de Tarefas',
+    validate_select_prompt: 'Selecione qual tarefa deseja validar e fechar:',
+    validate_assign_confirm: (key: string, name: string) =>
+      `Deseja atribuir a tarefa ${key} a você mesmo (${name})?`,
+    validate_assigning: 'Atribuindo tarefa...',
+    validate_assign_success: (name: string) => `Tarefa atribuída com sucesso para ${name}.`,
+    validate_time_prompt: 'Quanto tempo levou a implementação? (Ex: 1h, 45m, 2h 30m)',
+    validate_time_required: 'Tempo de implementação é obrigatório.',
+    validate_logging_worklog: 'Apontando tempo no Jira...',
+    validate_worklog_success: (timeSpent: string) =>
+      `Tempo de ${timeSpent} apontado com sucesso no Jira.`,
+    validate_closing_issue: 'Mapeando transição e fechando ticket no Jira...',
+    validate_close_success: (key: string) => `Ticket ${key} finalizado/concluído no Jira.`,
+    validate_close_fail: 'Não foi possível alterar status para Done no Jira.',
+    validate_jira_error: (msg: string) => `Erro na integração com o Jira: ${msg}`,
+    validate_local_success: 'Checklist local marcado como concluído.',
+    validate_local_error: (msg: string) => `Erro ao atualizar checklist local: ${msg}`,
+    validate_outro: 'Tarefa validada e fechada com sucesso!',
   },
 };
 

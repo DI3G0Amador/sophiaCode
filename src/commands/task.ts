@@ -157,7 +157,9 @@ export async function runTaskCommand(basePath: string): Promise<void> {
             );
             p.log.step(`• Jira Issue: ${jiraIssue.key}`);
           } catch (err) {
-            p.log.error(`Erro ao criar issue no Jira para tarefa ${task.index}: ${(err as Error).message}`);
+            p.log.error(
+              `Erro ao criar issue no Jira para tarefa ${task.index}: ${(err as Error).message}`
+            );
           }
         }
         jiraSpinner.stop('Exportação concluída! / Export completed!');

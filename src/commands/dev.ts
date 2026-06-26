@@ -52,7 +52,13 @@ export async function runDevCommand(basePath: string): Promise<void> {
   // Check if there is a linked Jira ticket
   let jiraLink: any = undefined;
   try {
-    const jiraPath = path.join(basePath, 'sophiAgents', 'tasks', selectedTaskDir as string, 'jira.json');
+    const jiraPath = path.join(
+      basePath,
+      'sophiAgents',
+      'tasks',
+      selectedTaskDir as string,
+      'jira.json'
+    );
     const jiraData = await fs.readFile(jiraPath, 'utf-8');
     jiraLink = JSON.parse(jiraData);
     p.log.info(`🔗 Tarefa vinculada ao Jira: ${jiraLink.issueKey}`);
@@ -104,10 +110,14 @@ export async function runDevCommand(basePath: string): Promise<void> {
           p.log.warn(`⚠️ Não foi possível alterar status para Done no Jira.`);
         }
       } else if (someDone) {
-        p.log.step(`Sincronizando Jira: Iniciando/Mantendo issue ${jiraLink.issueKey} em andamento...`);
+        p.log.step(
+          `Sincronizando Jira: Iniciando/Mantendo issue ${jiraLink.issueKey} em andamento...`
+        );
         const ok = await transitionJiraIssueByName(basePath, jiraLink.issueKey, 'Progress');
         if (ok) {
-          p.log.success(`✅ Issue ${jiraLink.issueKey} marcada como Em Andamento/In Progress no Jira.`);
+          p.log.success(
+            `✅ Issue ${jiraLink.issueKey} marcada como Em Andamento/In Progress no Jira.`
+          );
         } else {
           p.log.warn(`⚠️ Não foi possível alterar status para In Progress no Jira.`);
         }

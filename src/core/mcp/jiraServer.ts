@@ -70,7 +70,7 @@ export function startJiraMcpServer(basePath: string = process.cwd()): void {
       if (response) {
         console.log(JSON.stringify(response));
       }
-    } catch (err) {
+    } catch {
       console.log(
         JSON.stringify({
           jsonrpc: '2.0',
@@ -119,7 +119,10 @@ async function handleMcpRequest(req: any, basePath: string): Promise<any> {
                   summary: { type: 'string', description: 'Brief summary of the issue' },
                   description: { type: 'string', description: 'Detailed description string' },
                   issueType: { type: 'string', description: 'Issue type (e.g. Task, Bug, Story)' },
-                  parentKey: { type: 'string', description: 'Parent issue key if creating a sub-task' },
+                  parentKey: {
+                    type: 'string',
+                    description: 'Parent issue key if creating a sub-task',
+                  },
                 },
                 required: ['projectKey', 'summary', 'description'],
               },
@@ -141,8 +144,14 @@ async function handleMcpRequest(req: any, basePath: string): Promise<any> {
               inputSchema: {
                 type: 'object',
                 properties: {
-                  jql: { type: 'string', description: 'JQL string, e.g. project = PROJ AND status = Open' },
-                  maxResults: { type: 'number', description: 'Maximum number of results to return (default 50)' },
+                  jql: {
+                    type: 'string',
+                    description: 'JQL string, e.g. project = PROJ AND status = Open',
+                  },
+                  maxResults: {
+                    type: 'number',
+                    description: 'Maximum number of results to return (default 50)',
+                  },
                 },
                 required: ['jql'],
               },
@@ -154,7 +163,10 @@ async function handleMcpRequest(req: any, basePath: string): Promise<any> {
                 type: 'object',
                 properties: {
                   issueKey: { type: 'string', description: 'Jira issue key, e.g. PROJ-123' },
-                  fields: { type: 'object', description: 'Fields to update, e.g. { summary: "New Summary" }' },
+                  fields: {
+                    type: 'object',
+                    description: 'Fields to update, e.g. { summary: "New Summary" }',
+                  },
                   transitionId: { type: 'string', description: 'Transition ID to change status' },
                 },
                 required: ['issueKey'],
@@ -193,7 +205,9 @@ async function handleMcpRequest(req: any, basePath: string): Promise<any> {
           id,
           result: {
             isError: true,
-            content: [{ type: 'text', text: `Error executing Jira tool: ${(err as Error).message}` }],
+            content: [
+              { type: 'text', text: `Error executing Jira tool: ${(err as Error).message}` },
+            ],
           },
         };
       }
@@ -208,7 +222,12 @@ async function handleMcpRequest(req: any, basePath: string): Promise<any> {
   }
 }
 
-async function executeTool(name: string, args: any, config: JiraConfig, basePath: string): Promise<any> {
+async function executeTool(
+  name: string,
+  args: any,
+  config: JiraConfig,
+  basePath: string
+): Promise<any> {
   const { url, email, token } = config;
   const auth = Buffer.from(`${email}:${token}`).toString('base64');
   const headers = {
@@ -219,7 +238,11 @@ async function executeTool(name: string, args: any, config: JiraConfig, basePath
 
   switch (name) {
     case 'jira_create_issue': {
-      const resolvedType = await resolveIssueType(basePath, args.projectKey, args.issueType || 'Task');
+      const resolvedType = await resolveIssueType(
+        basePath,
+        args.projectKey,
+        args.issueType || 'Task'
+      );
       const body: any = {
         fields: {
           project: { key: args.projectKey },
@@ -542,4 +565,82 @@ export async function resolveIssueType(
   }
 }
 
+/**
+ * Fetches current logged-in Jira user details.
+ */
+export async function getJiraMyself(
+  basePath: string
+): Promise<{ accountId: string; displayName: string; emailAddress: string }> {
+  const credentials = await loadJiraCredentials(basePath);
+  const auth = Buffer.from(`${credentials.email}:${credentials.token}`).toString('base64');
+  const response = await fetch(`${credentials.url}/rest/api/2/myself`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      Accept: 'application/json',
+    },
+  });
 
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Jira API error fetching myself (${response.status}): ${errorText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Assigns a Jira issue to a specific accountId.
+ */
+export async function assignJiraIssue(
+  basePath: string,
+  issueKey: string,
+  accountId: string
+): Promise<void> {
+  const credentials = await loadJiraCredentials(basePath);
+  const auth = Buffer.from(`${credentials.email}:${credentials.token}`).toString('base64');
+  const response = await fetch(`${credentials.url}/rest/api/2/issue/${issueKey}/assignee`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ accountId }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Jira API error assigning issue (${response.status}): ${errorText}`);
+  }
+}
+
+/**
+ * Adds a worklog entry to a Jira issue.
+ */
+export async function addJiraWorklog(
+  basePath: string,
+  issueKey: string,
+  timeSpent: string,
+  comment = 'Work logged via SophiaCode CLI'
+): Promise<void> {
+  const credentials = await loadJiraCredentials(basePath);
+  const auth = Buffer.from(`${credentials.email}:${credentials.token}`).toString('base64');
+  const response = await fetch(`${credentials.url}/rest/api/2/issue/${issueKey}/worklog`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      timeSpent,
+      comment,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Jira API error adding worklog (${response.status}): ${errorText}`);
+  }
+}

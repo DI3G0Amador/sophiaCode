@@ -6,6 +6,7 @@ import { runTaskCommand } from './task.js';
 import { runDevCommand } from './dev.js';
 import { runSkillCommand } from './skill.js';
 import { runBridgeCommand } from './bridge.js';
+import { runValidateCommand } from './validate.js';
 
 export async function runInteractiveDashboard(basePath: string): Promise<void> {
   await ensureLanguageResolved();
@@ -41,6 +42,7 @@ export async function runInteractiveDashboard(basePath: string): Promise<void> {
           { value: 'mvp', label: t('dashboard_menu_mvp') },
           { value: 'task', label: t('dashboard_menu_task') },
           { value: 'dev', label: t('dashboard_menu_dev') },
+          { value: 'validate', label: t('dashboard_menu_validate') },
           { value: 'skill', label: t('dashboard_menu_skill') },
           { value: 'bridge', label: t('dashboard_menu_bridge') },
           { value: 'exit', label: t('dashboard_menu_exit') },
@@ -67,6 +69,8 @@ export async function runInteractiveDashboard(basePath: string): Promise<void> {
           await runTaskCommand(basePath);
         } else if (choice === 'dev') {
           await runDevCommand(basePath);
+        } else if (choice === 'validate') {
+          await runValidateCommand(basePath);
         } else if (choice === 'skill') {
           await runSkillCommand(basePath);
         } else if (choice === 'bridge') {

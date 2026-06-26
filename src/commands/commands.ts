@@ -5,6 +5,7 @@ import { runTaskCommand } from './task.js';
 import { runDevCommand } from './dev.js';
 import { runSkillCommand } from './skill.js';
 import { runBridgeCommand } from './bridge.js';
+import { runValidateCommand } from './validate.js';
 import { ensureLanguageResolved } from '../core/i18n.js';
 
 /**
@@ -121,6 +122,21 @@ export function setupCommands(): Command {
         startJiraMcpServer(basePath);
       } catch (error) {
         console.error('An unexpected error occurred during Jira MCP server startup:', error);
+        process.exit(1);
+      }
+    });
+
+  // Command: validate
+  program
+    .command('validate')
+    .description('Validate and close tasks with Jira integration')
+    .action(async () => {
+      try {
+        const basePath = process.cwd();
+        await ensureLanguageResolved();
+        await runValidateCommand(basePath);
+      } catch (error) {
+        console.error('An unexpected error occurred during task validation:', error);
         process.exit(1);
       }
     });

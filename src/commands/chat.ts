@@ -12,11 +12,7 @@ import {
 import { listTasks } from '../core/fs/writer.js';
 import { createAIService } from '../core/ai/providers.js';
 import { getApiKey } from '../core/fs/global-config.js';
-import {
-  CHAT_SYSTEM_PROMPT,
-  CHAT_SCHEMA,
-  buildChatPrompt,
-} from '../core/ai/prompts.js';
+import { CHAT_SYSTEM_PROMPT, CHAT_SCHEMA, buildChatPrompt } from '../core/ai/prompts.js';
 import { askMultilinePreserved } from '../core/cli/input-handler.js';
 
 export async function runChatSession(
@@ -223,6 +219,7 @@ async function handleSlashCommand(basePath: string, input: string): Promise<bool
           `• /dev     : Modo Engenheiro (checklist de desenvolvimento)\n` +
           `• /skill   : Configurar servidores MCP e automações\n` +
           `• /bridge  : Configurar pontes para outros agentes (Cursor, Claude Code)\n` +
+          `• /validar : Validar e fechar tarefas com integração ao Jira\n` +
           `• /help    : Exibir esta ajuda`,
         'SophiaCode Commands'
       );
@@ -269,6 +266,13 @@ async function handleSlashCommand(basePath: string, input: string): Promise<bool
       return true;
     }
 
+    case '/validar':
+    case '/validate': {
+      const { runValidateCommand } = await import('./validate.js');
+      await runValidateCommand(basePath);
+      return true;
+    }
+
     default:
       p.log.warn(`Comando desconhecido: ${cmd}. Digite /help para ajuda.`);
       return true;
@@ -290,5 +294,7 @@ async function changeModelFlow(basePath: string): Promise<void> {
   };
 
   await saveProjectConfig(basePath, updatedConfig);
-  p.log.success(`Modelo atualizado com sucesso para: ${setupConfig.provider} (${setupConfig.modelName})`);
+  p.log.success(
+    `Modelo atualizado com sucesso para: ${setupConfig.provider} (${setupConfig.modelName})`
+  );
 }

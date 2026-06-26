@@ -309,20 +309,27 @@ export const CHAT_SCHEMA = {
     },
     message: {
       type: 'STRING',
-      description: "The assistant message to print to the user (written in user's language, markdown allowed)",
+      description:
+        "The assistant message to print to the user (written in user's language, markdown allowed)",
     },
     mvpData: {
       type: 'OBJECT',
       properties: {
         name: { type: 'STRING', description: 'Descriptive name of the MVP' },
-        key: { type: 'STRING', description: 'Unique slug containing lowercase letters, numbers, and hyphens' },
+        key: {
+          type: 'STRING',
+          description: 'Unique slug containing lowercase letters, numbers, and hyphens',
+        },
         description: { type: 'STRING', description: 'Main objective of this MVP' },
         features: {
           type: 'ARRAY',
           items: { type: 'STRING' },
           description: 'Key features list',
         },
-        requirements: { type: 'STRING', description: 'Technical requirements or constraints (in English)' },
+        requirements: {
+          type: 'STRING',
+          description: 'Technical requirements or constraints (in English)',
+        },
         status: { type: 'STRING', description: 'Initial status (e.g., draft)' },
       },
       required: ['name', 'key', 'description', 'features', 'requirements', 'status'],
@@ -362,4 +369,3 @@ ${conversationHistory}
 Determine the action and write a JSON response:
 `;
 }
-
