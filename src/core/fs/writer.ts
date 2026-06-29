@@ -158,12 +158,14 @@ export async function writeMapFile(basePath: string, content: string): Promise<v
 
 /**
  * Saves the project configuration (config.json) under the sophiAgents folder.
+ * Also ensures it is added to .gitignore.
  */
 export async function saveProjectConfig(basePath: string, config: any): Promise<void> {
   const configDir = getConfigDirectory(basePath);
   const configPath = path.join(configDir, 'config.json');
   await fs.mkdir(configDir, { recursive: true });
   await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+  await ensureGitignoreIgnored(basePath);
 }
 
 /**
@@ -283,4 +285,37 @@ export async function saveSkillConfig(basePath: string, mcpConfig: any): Promise
     JSON.stringify(mcpConfig, null, 2),
     'utf-8'
   );
+}
+
+/**
+ * Ensures that the project's local config.json is excluded from version control by appending it to .gitignore.
+ */
+export async function ensureGitignoreIgnored(basePath: string): Promise<void> {
+  const gitignorePath = path.join(basePath, '.gitignore');
+  const ignoreLine = 'sophiAgents/config.json';
+  
+  try {
+    let content = '';
+    try {
+      content = await fs.readFile(gitignorePath, 'utf-8');
+    } catch {
+      // If .gitignore does not exist, we will create a new one
+    }
+
+    const lines = content.split(/\r?\n/).map(line => line.trim());
+    
+    // Check if sophiAgents/config.json or sophiAgents/ or sophiAgents is already ignored
+    const isIgnored = lines.some(line => line === ignoreLine || line === 'sophiAgents/' || line === 'sophiAgents');
+    
+    if (!isIgnored) {
+      const newLineSuffix = content.endsWith('\n') || content.trim().length === 0 ? '' : '\n';
+      await fs.appendFile(
+        gitignorePath,
+        `${newLineSuffix}\n# Local agent configuration (contains preferences and/or secrets)\n${ignoreLine}\n`,
+        'utf-8'
+      );
+    }
+  } catch {
+    // Fail silently if unable to write .gitignore
+  }
 }

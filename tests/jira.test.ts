@@ -22,6 +22,7 @@ vi.mock('@clack/prompts', () => {
     },
     select: vi.fn(),
     text: vi.fn(),
+    password: vi.fn(),
     isCancel: vi.fn(() => false),
   };
 });
@@ -82,17 +83,19 @@ describe('Jira Integration Module', () => {
     // 2. Set up prompt responses
     const textMock = vi.mocked(p.text);
     const selectMock = vi.mocked(p.select);
+    const passwordMock = vi.mocked(p.password);
 
     // Prompt call sequence:
-    // 1st: url
-    // 2nd: email
-    // 3rd: token
-    // 4th: projectKey
+    // 1st text: url
+    // 2nd text: email
+    // password: token
+    // 3rd text: projectKey
     textMock
       .mockResolvedValueOnce('https://local-domain.atlassian.net') // URL
       .mockResolvedValueOnce('local@example.com') // Email
-      .mockResolvedValueOnce('local-token-xyz') // Token
       .mockResolvedValueOnce('MYPROJ'); // Project Key
+
+    passwordMock.mockResolvedValueOnce('local-token-xyz'); // Token
 
     selectMock.mockResolvedValueOnce('local'); // Scope selection
 
@@ -118,13 +121,15 @@ describe('Jira Integration Module', () => {
     // Make sure workspace context files are already there (from previous test)
     const textMock = vi.mocked(p.text);
     const selectMock = vi.mocked(p.select);
+    const passwordMock = vi.mocked(p.password);
 
     // Mock prompt sequence for global
     textMock
       .mockResolvedValueOnce('https://global-domain.atlassian.net') // URL
       .mockResolvedValueOnce('global@example.com') // Email
-      .mockResolvedValueOnce('global-token-abc') // Token
       .mockResolvedValueOnce('GLOBALPROJ'); // Project Key
+
+    passwordMock.mockResolvedValueOnce('global-token-abc'); // Token
 
     selectMock.mockResolvedValueOnce('global'); // Scope selection
 

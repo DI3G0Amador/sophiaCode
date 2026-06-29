@@ -60,11 +60,10 @@ export async function runJiraConfigFlow(basePath: string): Promise<void> {
   }
 
   // 3. Jira API Token
-  const token = await p.text({
+  const token = await p.password({
     message: t('jira_token_prompt'),
-    initialValue: defaultToken,
     validate(value) {
-      if (!value || value.trim().length === 0) {
+      if ((!value || value.trim().length === 0) && !defaultToken) {
         return t('jira_token_required');
       }
     },
@@ -73,6 +72,7 @@ export async function runJiraConfigFlow(basePath: string): Promise<void> {
     p.outro(t('cancel_generic'));
     return;
   }
+  const resolvedToken = token || defaultToken;
 
   // 4. Jira Project Key
   const projectKey = await p.text({
@@ -109,7 +109,7 @@ export async function runJiraConfigFlow(basePath: string): Promise<void> {
       jira: {
         url: url.trim(),
         email: email.trim(),
-        token: token.trim(),
+        token: resolvedToken.trim(),
       },
     };
     await saveGlobalConfig(globalConfig);
@@ -130,7 +130,7 @@ export async function runJiraConfigFlow(basePath: string): Promise<void> {
     existingProj.jira = {
       url: url.trim(),
       email: email.trim(),
-      token: token.trim(),
+      token: resolvedToken.trim(),
       projectKey: projectKey.trim().toUpperCase(),
     };
     await saveProjectConfig(basePath, existingProj);

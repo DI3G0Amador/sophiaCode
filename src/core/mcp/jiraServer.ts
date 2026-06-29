@@ -660,7 +660,7 @@ export async function getJiraSubtasks(
   const auth = Buffer.from(`${credentials.email}:${credentials.token}`).toString('base64');
   const jql = `parent = "${parentKey}"`;
   const response = await fetch(
-    `${credentials.url}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}`,
+    `${credentials.url}/rest/api/3/search?jql=${encodeURIComponent(jql)}`,
     {
       method: 'GET',
       headers: {
