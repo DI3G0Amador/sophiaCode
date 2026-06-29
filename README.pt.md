@@ -44,6 +44,61 @@ Se você precisar automatizar fluxos (como em pipelines de CI/CD), é possível 
 
 ---
 
+## Opções de Instalação
+
+Dependendo de sua preferência, você pode instalar o SophiaCode de uma das seguintes formas:
+
+### Opção 1: Instalação Local ou via Git (Recomendada para desenvolvimento/customização)
+Você pode instalar o SophiaCode diretamente de uma pasta local ou de um repositório Git. Graças aos hooks de ciclo de vida do npm, a compilação do TypeScript é feita de forma 100% automática durante a instalação:
+```bash
+# Instalar a partir de uma pasta local
+npm install -g /caminho/para/sophiaCode
+
+# Ou instalar diretamente do repositório Git remoto
+npm install -g git+https://github.com/D13GO91/sophiaCode.git
+```
+
+### Opção 2: Instalação Global via npm
+Uma vez que o pacote esteja publicado no registro público do npm, você pode instalá-lo em qualquer máquina com o comando:
+```bash
+npm install -g sophiacode
+```
+
+---
+
+## Configuração do Servidor MCP do Jira
+
+O SophiaCode possui um servidor MCP do Jira integrado. Para usá-lo com seu cliente de IA favorito (como Claude Desktop ou Cursor):
+
+### 1. Configuração no Claude Desktop
+Adicione a configuração do servidor em `%APPDATA%\Claude\claude_desktop_config.json` (Windows) ou `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
+```json
+{
+  "mcpServers": {
+    "sophiacode-jira": {
+      "command": "sophiacode",
+      "args": ["jira-mcp"],
+      "env": {
+        "JIRA_URL": "https://seu-dominio.atlassian.net",
+        "JIRA_EMAIL": "seu-email@empresa.com",
+        "JIRA_API_TOKEN": "SEU_API_TOKEN_DO_JIRA"
+      }
+    }
+  }
+}
+```
+
+### 2. Configuração no Cursor
+1. Abra as Configurações do Cursor (`Ctrl + ,` ou `Cmd + ,`) e navegue até **Features** -> **MCP**.
+2. Clique em **+ Add New MCP Server**.
+3. Preencha com os seguintes detalhes:
+   - **Name**: `sophiacode-jira`
+   - **Type**: `command`
+   - **Command**: `sophiacode jira-mcp`
+4. Forneça as variáveis de ambiente (`JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`) no ambiente do seu sistema ou no arquivo `.env` do seu projeto local antes de iniciar o Cursor.
+
+---
+
 ## Desenvolvimento Local e Contribuição
 
 Se você deseja contribuir para a ferramenta, pode configurar o ambiente de desenvolvimento local:

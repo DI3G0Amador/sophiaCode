@@ -44,6 +44,61 @@ If you need to automate workflows (e.g. in CI/CD pipelines), you can run specifi
 
 ---
 
+## Installation Options
+
+Depending on your preference, you can install SophiaCode in one of the following ways:
+
+### Option 1: Local or Git Installation (Recommended for development/customization)
+You can install SophiaCode directly from the local folder or a Git repository. Thanks to the build lifecycle hooks, TypeScript compilation is handled automatically:
+```bash
+# Install from a local folder
+npm install -g /path/to/sophiaCode
+
+# Or install directly from a remote Git repository
+npm install -g git+https://github.com/D13GO91/sophiaCode.git
+```
+
+### Option 2: Global Installation from npm
+Once published to the npm registry, you can install it on any machine using:
+```bash
+npm install -g sophiacode
+```
+
+---
+
+## Jira MCP Server Setup
+
+SophiaCode comes with a built-in Jira MCP server. To use it with your favorite AI client (like Claude Desktop or Cursor):
+
+### 1. Claude Desktop Configuration
+Add the server configuration in your `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
+```json
+{
+  "mcpServers": {
+    "sophiacode-jira": {
+      "command": "sophiacode",
+      "args": ["jira-mcp"],
+      "env": {
+        "JIRA_URL": "https://your-domain.atlassian.net",
+        "JIRA_EMAIL": "your-email@company.com",
+        "JIRA_API_TOKEN": "YOUR_JIRA_API_TOKEN"
+      }
+    }
+  }
+}
+```
+
+### 2. Cursor Configuration
+1. Open Cursor Settings (`Ctrl + ,` or `Cmd + ,`) and navigate to **Features** -> **MCP**.
+2. Click **+ Add New MCP Server**.
+3. Set the following details:
+   - **Name**: `sophiacode-jira`
+   - **Type**: `command`
+   - **Command**: `sophiacode jira-mcp`
+4. Provide the environment variables (`JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`) either in your system environment or within your local project `.env` file before launching Cursor.
+
+---
+
 ## Local Development and Contribution
 
 If you want to contribute to this open-source tool, you can set up the developer environment:
