@@ -293,7 +293,7 @@ export async function saveSkillConfig(basePath: string, mcpConfig: any): Promise
 export async function ensureGitignoreIgnored(basePath: string): Promise<void> {
   const gitignorePath = path.join(basePath, '.gitignore');
   const ignoreLine = 'sophiAgents/config.json';
-  
+
   try {
     let content = '';
     try {
@@ -302,11 +302,13 @@ export async function ensureGitignoreIgnored(basePath: string): Promise<void> {
       // If .gitignore does not exist, we will create a new one
     }
 
-    const lines = content.split(/\r?\n/).map(line => line.trim());
-    
+    const lines = content.split(/\r?\n/).map((line) => line.trim());
+
     // Check if sophiAgents/config.json or sophiAgents/ or sophiAgents is already ignored
-    const isIgnored = lines.some(line => line === ignoreLine || line === 'sophiAgents/' || line === 'sophiAgents');
-    
+    const isIgnored = lines.some(
+      (line) => line === ignoreLine || line === 'sophiAgents/' || line === 'sophiAgents'
+    );
+
     if (!isIgnored) {
       const newLineSuffix = content.endsWith('\n') || content.trim().length === 0 ? '' : '\n';
       await fs.appendFile(
