@@ -55,7 +55,7 @@ You can install SophiaCode directly from the local folder or a Git repository. T
 npm install -g /path/to/sophiaCode
 
 # Or install directly from a remote Git repository
-npm install -g git+https://github.com/D13GO91/sophiaCode.git
+npm install -g git+https://github.com/DI3G0Amador/sophiaCode.git
 ```
 
 ### Option 2: Global Installation from npm
@@ -105,7 +105,7 @@ If you want to contribute to this open-source tool, you can set up the developer
 
 ```bash
 # Clone the repository
-git clone https://github.com/D13GO91/sophiaCode.git
+git clone https://github.com/DI3G0Amador/sophiaCode.git
 cd sophiaCode
 
 # Install dependencies

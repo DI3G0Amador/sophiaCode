@@ -55,7 +55,7 @@ Você pode instalar o SophiaCode diretamente de uma pasta local ou de um reposit
 npm install -g /caminho/para/sophiaCode
 
 # Ou instalar diretamente do repositório Git remoto
-npm install -g git+https://github.com/D13GO91/sophiaCode.git
+npm install -g git+https://github.com/DI3G0Amador/sophiaCode.git
 ```
 
 ### Opção 2: Instalação Global via npm
@@ -105,7 +105,7 @@ Se você deseja contribuir para a ferramenta, pode configurar o ambiente de dese
 
 ```bash
 # Clone o repositório
-git clone https://github.com/D13GO91/sophiaCode.git
+git clone https://github.com/DI3G0Amador/sophiaCode.git
 cd sophiaCode
 
 # Instale as dependências

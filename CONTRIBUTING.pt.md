@@ -14,7 +14,7 @@ Para começar a desenvolver, certifique-se de ter o Node.js (versão 18 ou super
 
 ```bash
 # Clone o repositório
-git clone https://github.com/D13GO91/sophiaCode.git
+git clone https://github.com/DI3G0Amador/sophiaCode.git
 cd sophiaCode
 
 # Instale as dependências
