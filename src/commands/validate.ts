@@ -1,7 +1,11 @@
 import * as p from '@clack/prompts';
 import fs from 'fs/promises';
 import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { t } from '../core/i18n.js';
+
+const execAsync = promisify(exec);
 import {
   checkConfigExist,
   listTasks,
@@ -37,6 +41,53 @@ export async function runValidateCommand(basePath: string): Promise<void> {
   if (p.isCancel(selectedTaskDir)) {
     p.outro(t('cancel_generic'));
     return;
+  }
+
+  // 3.1 Quality check validation step
+  const scriptPath = path.join(basePath, 'sophiAgents', 'skills', 'verify-quality.sh');
+  let hasScript = false;
+  try {
+    await fs.access(scriptPath);
+    hasScript = true;
+  } catch {
+    // Script not found, ignore
+  }
+
+  if (hasScript) {
+    const runScript = await p.confirm({
+      message:
+        'Deseja rodar o script de validação de qualidade (verify-quality.sh) antes de fechar a tarefa?',
+      initialValue: true,
+    });
+
+    if (p.isCancel(runScript)) {
+      p.outro(t('cancel_generic'));
+      return;
+    }
+
+    if (runScript) {
+      const valSpinner = p.spinner();
+      valSpinner.start('Executando script de validação de qualidade...');
+
+      let cmd = `bash "${scriptPath}"`;
+      if (process.platform === 'win32') {
+        cmd = `sh "${scriptPath}"`;
+      }
+
+      try {
+        const { stdout } = await execAsync(cmd);
+        valSpinner.stop('✅ Validação de qualidade passou com sucesso!');
+        if (stdout && stdout.trim().length > 0) {
+          p.log.info(stdout);
+        }
+      } catch (execErr: any) {
+        valSpinner.stop('❌ Falha na validação de qualidade!');
+        p.log.error(execErr.stdout || execErr.stderr || execErr.message);
+        p.log.warn('Corrija os erros de validação antes de fechar a tarefa.');
+        p.outro('Validação abortada.');
+        return;
+      }
+    }
   }
 
   // 4. Load Jira metadata if exists

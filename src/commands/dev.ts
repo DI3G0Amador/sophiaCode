@@ -134,10 +134,26 @@ export async function runDevCommand(basePath: string): Promise<void> {
   if (nextSubtask) {
     p.log.info(t('dev_next_step'));
     p.log.step(`» "${nextSubtask.title}"`);
-    p.note(
-      t('dev_next_instruction_content', selectedTaskDir, nextSubtask.title),
-      t('dev_next_instruction_title')
-    );
+
+    const promptXml =
+      `<instructions_xml>\n` +
+      `<task_context>\n` +
+      `  Project Task: "${selectedTaskDir}"\n` +
+      `  Current Subtask to Execute: "${nextSubtask.title}"\n` +
+      `  Detailed implementation plan: "sophiAgents/tasks/${selectedTaskDir}/plan.md"\n` +
+      `</task_context>\n\n` +
+      `<instructions>\n` +
+      `  1. Read the plan in "sophiAgents/tasks/${selectedTaskDir}/plan.md".\n` +
+      `  2. Execute the changes needed ONLY for: "${nextSubtask.title}".\n` +
+      `  3. DO NOT implement future/unrelated tasks or refactorings.\n` +
+      `  4. Strictly adhere to standard practices in "sophiAgents/context/coding-patterns.md" and "sophiAgents/context/architecture.md".\n` +
+      `</instructions>\n\n` +
+      `<validation>\n` +
+      `  Run your local tests or build command to ensure your changes are correct before completion.\n` +
+      `</validation>\n` +
+      `</instructions_xml>`;
+
+    p.note(promptXml, t('dev_next_instruction_title'));
   } else {
     p.log.success(t('dev_all_completed'));
   }

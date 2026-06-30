@@ -1,4 +1,6 @@
 import * as p from '@clack/prompts';
+import fs from 'fs/promises';
+import path from 'path';
 import {
   checkConfigExist,
   readProjectConfig,
@@ -141,13 +143,22 @@ export async function runMvpCommand(basePath: string): Promise<void> {
       features: string[];
       requirements: string;
       status: string;
+      designDocContent: string;
     }>(MVP_SYSTEM_PROMPT, userPrompt, MVP_SCHEMA);
 
+    // Extract design doc and remove it from JSON
+    const { designDocContent, ...cleanMvpResult } = mvpResult;
+
     // Save to disk
-    await saveMvpConfig(basePath, key, mvpResult);
+    await saveMvpConfig(basePath, key, cleanMvpResult);
+
+    const designDocPath = path.join(basePath, 'sophiAgents', 'mvps', `${key}-design.md`);
+    await fs.writeFile(designDocPath, designDocContent || '', 'utf-8');
+
     aiSpinner.stop(t('mvp_success'));
 
     p.log.success(`✅ "sophiAgents/mvps/${key}.json"`);
+    p.log.success(`✅ "sophiAgents/mvps/${key}-design.md"`);
     p.outro(t('mvp_outro'));
   } catch (error) {
     aiSpinner.stop('Error!');
