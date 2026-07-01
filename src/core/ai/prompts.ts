@@ -169,8 +169,21 @@ export const MVP_SCHEMA = {
     },
     requirements: { type: 'STRING' },
     status: { type: 'STRING' },
+    designDocContent: {
+      type: 'STRING',
+      description:
+        'A comprehensive markdown design doc (RFC format) in English detailing: 1. Objective & Problem Statement, 2. Proposed Architecture & Components, 3. Core Data Flow, 4. Edge Cases & Mitigations.',
+    },
   },
-  required: ['name', 'key', 'description', 'features', 'requirements', 'status'],
+  required: [
+    'name',
+    'key',
+    'description',
+    'features',
+    'requirements',
+    'status',
+    'designDocContent',
+  ],
 };
 
 /**
@@ -179,6 +192,8 @@ export const MVP_SCHEMA = {
 export const MVP_SYSTEM_PROMPT = `
 You are the SophiaCode MVP Architect. Your task is to take the user inputs and design a detailed MVP (Minimum Viable Product) specification JSON document.
 Ensure the features are concrete and feasible based on the codebase stack. Translate any Portuguese input into English for requirements.
+
+You MUST also generate a detailed technical Design Doc/RFC in Markdown inside the 'designDocContent' field, written in English.
 `;
 
 /**

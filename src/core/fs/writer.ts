@@ -120,6 +120,43 @@ export async function writeAgentBridgeFile(
       `This project uses SophiaCode for development guidelines. Please read:\n` +
       `- sophiAgents/context/architecture.md\n` +
       `- sophiAgents/context/coding-patterns.md\n`;
+
+    try {
+      const rulesDir = path.join(basePath, '.cursor', 'rules');
+      await fs.mkdir(rulesDir, { recursive: true });
+
+      const contextRuleContent =
+        `---\n` +
+        `description: Always read architectural guidelines and workspace context in sophiAgents\n` +
+        `globs: *\n` +
+        `alwaysApply: true\n` +
+        `---\n` +
+        `This project uses **SophiaCode** for architecture mapping and context orchestration.\n` +
+        `For the complete directory structure, purpose, stack details, and overall goals, please read the architecture definition file:\n` +
+        `- [sophiAgents/context/architecture.md](sophiAgents/context/architecture.md)\n`;
+
+      const patternsRuleContent =
+        `---\n` +
+        `description: Always adhere to the coding standards, patterns, and style rules defined in sophiAgents\n` +
+        `globs: **/*.ts, **/*.js, **/*.tsx, **/*.jsx, **/*.py, **/*.go, **/*.rs\n` +
+        `alwaysApply: true\n` +
+        `---\n` +
+        `When creating new components, refactoring code, or fixing bugs, follow the coding standards and styling patterns defined in:\n` +
+        `- [sophiAgents/context/coding-patterns.md](sophiAgents/context/coding-patterns.md)\n`;
+
+      await fs.writeFile(
+        path.join(rulesDir, 'sophiagents-context.mdc'),
+        contextRuleContent,
+        'utf-8'
+      );
+      await fs.writeFile(
+        path.join(rulesDir, 'sophiagents-patterns.mdc'),
+        patternsRuleContent,
+        'utf-8'
+      );
+    } catch {
+      // Ignore directory creation or write errors
+    }
   } else if (toolType === 'opencode') {
     fileName = 'AGENTS.md';
     content =
